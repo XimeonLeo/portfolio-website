@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Messaging demo</title>
+<style>
+/* A messaging-app style screen for recording the demo. It is a stand-in: the replies come from the real n8n workflow. */
+:root{--bg:#0B141A;--panel:#111B21;--head:#202C33;--line:#222D34;--text:#E9EDEF;--mute:#8696A0;--out:#005C4B;--in:#202C33;--accent:#00A884;--tick:#53BDEB}
+*{box-sizing:border-box}
+html{height:100%;margin:0;padding-top:50px;box-sizing:border-box;background:var(--bg,#F6F1E9)}body{height:100%;margin:0}
+body{background:var(--bg);color:var(--text);font:400 14.5px/1.4 "Segoe UI",system-ui,sans-serif;display:grid;grid-template-columns:330px minmax(0,1fr) 320px;overflow:hidden}
+.col{display:flex;flex-direction:column;min-height:0;border-right:1px solid var(--line)}
+.bar{height:56px;flex:none;background:var(--head);display:flex;align-items:center;gap:12px;padding:0 16px}
+.av{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;font-weight:600;font-size:14px;flex:none}
+.av.me{background:#6B7C85}.av.c1{background:#0E8C8A}.av.c2{background:#8E6BBF}.av.c3{background:#C7774F}.av.c4{background:#4F7FC7}
+.bar b{font-weight:500;font-size:16px}.bar small{display:block;color:var(--mute);font-size:12.5px;font-weight:400}
+.search{margin:8px 12px;background:var(--head);border-radius:8px;padding:8px 14px;color:var(--mute);font-size:13.5px}
+.chats{overflow:hidden;flex:1}
+.chat{display:flex;gap:12px;padding:11px 14px;align-items:center;border-bottom:1px solid var(--line)}
+.chat.on{background:#2A3942}
+.chat .t{min-width:0;flex:1}.chat .t b{display:flex;align-items:center;font-weight:400;font-size:15.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chat .t span{display:block;color:var(--mute);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chat time{color:var(--mute);font-size:11.5px;align-self:flex-start;margin-top:3px}
+.verified{display:inline-grid;place-items:center;width:15px;height:15px;border-radius:50%;background:var(--accent);color:#fff;font-size:10px;margin-left:5px;vertical-align:1px}
+.msgs{flex:1;min-height:0;overflow-y:auto;padding:16px 6%;display:flex;flex-direction:column;gap:5px;background:#0B141A radial-gradient(circle at 1px 1px,rgba(255,255,255,.035) 1px,transparent 0) 0 0/22px 22px}
+.msgs::-webkit-scrollbar{width:6px}.msgs::-webkit-scrollbar-thumb{background:#2A3942}
+.day{align-self:center;background:#182229;color:var(--mute);font-size:12px;padding:5px 12px;border-radius:8px;margin:2px 0 8px}
+.b{max-width:66%;padding:7px 10px 8px;border-radius:9px;position:relative;white-space:pre-wrap;word-wrap:break-word;box-shadow:0 1px .5px rgba(0,0,0,.3);animation:pop .18s ease-out}
+.b.in{background:var(--in);align-self:flex-start;border-top-left-radius:2px}
+.b.out{background:var(--out);align-self:flex-end;border-top-right-radius:2px}
+.b .m{float:right;margin:6px 0 -4px 12px;font-size:11px;color:rgba(233,237,239,.6);white-space:nowrap}
+.b.out .m i{font-style:normal;color:var(--tick);margin-left:3px;letter-spacing:-3px}
+.typing{align-self:flex-start;background:var(--in);border-radius:9px;padding:11px 14px;display:flex;gap:4px}
+.typing i{width:7px;height:7px;border-radius:50%;background:var(--mute);animation:blink 1.2s infinite}
+.typing i:nth-child(2){animation-delay:.2s}.typing i:nth-child(3){animation-delay:.4s}
+form{flex:none;background:var(--head);padding:10px 16px;display:flex;gap:10px;align-items:center}
+input{flex:1;background:#2A3942;border:0;border-radius:9px;padding:11px 14px;color:var(--text);font:inherit;outline:0}
+input::placeholder{color:var(--mute)}
+button{width:42px;height:42px;border-radius:50%;border:0;background:var(--accent);color:#04201A;font-size:17px;cursor:pointer}
+/* right: what the workflow did */
+.side{background:#0F171C;border-right:0}
+.side .bar{background:#0F171C;border-bottom:1px solid var(--line)}
+.side .bar b{font-size:13px;letter-spacing:.1em;text-transform:uppercase;color:var(--mute);font-weight:600}
+.log{flex:1;min-height:0;overflow:hidden;padding:14px;display:flex;flex-direction:column;gap:9px;justify-content:flex-end}
+.ev{border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:13px;animation:pop .25s ease-out}
+.ev b{display:flex;align-items:center;gap:8px;font-weight:600;font-size:13px}
+.ev b::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--mute)}
+.ev.ok b::before{background:#3DDC97}.ev.hot{border-color:#00A884;background:rgba(0,168,132,.08)}.ev.hot b::before{background:#00A884}.ev.warn b::before{background:#F0B429}
+.ev span{display:block;color:var(--mute);margin-top:3px}
+.note{padding:10px 14px;border-top:1px solid var(--line);color:var(--mute);font-size:11.5px}
+@keyframes pop{from{opacity:0;transform:translateY(6px)}}
+@keyframes blink{0%,60%,100%{opacity:.3}30%{opacity:1}}
+</style>
+</head>
+<body>
+<section class="col">
+  <div class="bar"><span class="av me">GL</span><b>Chats</b></div>
+  <div class="search">Search or start a new chat</div>
+  <div class="chats">
+    <div class="chat on"><span class="av c1">BC</span><div class="t"><b>Brightside Family Clinic<span class="verified">✓</span></b><span id="preview">Business account</span></div><time id="ptime"></time></div>
+    <div class="chat"><span class="av c2">MJ</span><div class="t"><b>Mum</b><span>See you Sunday x</span></div><time>Yesterday</time></div>
+    <div class="chat"><span class="av c3">TW</span><div class="t"><b>Tom (work)</b><span>Sent the file over</span></div><time>Yesterday</time></div>
+    <div class="chat"><span class="av c4">BK</span><div class="t"><b>Book club</b><span>Priya: next month is mine</span></div><time>Tuesday</time></div>
+  </div>
+</section>
+<section class="col">
+  <div class="bar"><span class="av c1">BC</span><div><b>Brightside Family Clinic<span class="verified">✓</span></b><small id="status">Business account · replies in seconds</small></div></div>
+  <div class="msgs" id="msgs"><span class="day">Today</span></div>
+  <form id="f" autocomplete="off"><input id="t" placeholder="Type a message" autofocus><button aria-label="Send">➤</button></form>
+</section>
+<section class="col side">
+  <div class="bar"><b>What the workflow did</b></div>
+  <div class="log" id="log"></div>
+  <div class="note">Demo screen. Replies come from the live n8n workflow.</div>
+</section>
+<script>
+const $ = s => document.querySelector(s), session = 'wa-' + Date.now().toString(36);
+const now = () => new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+function bubble(text, who) { const d = document.createElement('div'); d.className = 'b ' + who; d.textContent = text; const m = document.createElement('span'); m.className = 'm'; m.innerHTML = now() + (who === 'out' ? '<i>✓✓</i>' : ''); d.appendChild(m); $('#msgs').appendChild(d); $('#msgs').scrollTop = 1e6; $('#preview').textContent = text; $('#ptime').textContent = now(); }
+function ev(title, detail, cls) { const d = document.createElement('div'); d.className = 'ev ' + (cls || ''); d.innerHTML = '<b></b><span></span>'; d.firstChild.append(title); d.lastChild.textContent = detail; $('#log').appendChild(d); while ($('#log').children.length > 6) $('#log').firstChild.remove(); }
+$('#f').onsubmit = async e => {
+  e.preventDefault(); const text = $('#t').value.trim(); if (!text) return; $('#t').value = '';
+  bubble(text, 'out'); ev('Message received', 'Sent to the n8n webhook');
+  const tp = document.createElement('div'); tp.className = 'typing'; tp.innerHTML = '<i></i><i></i><i></i>'; $('#msgs').appendChild(tp); $('#msgs').scrollTop = 1e6; $('#status').textContent = 'typing…';
+  const t0 = performance.now(); let j = {};
+  try { j = await fetch('/api/wa', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ session, text, from: '+1 503 555 0190' }) }).then(r => r.json()); } catch { j = { reply: 'The assistant is offline right now.' }; }
+  tp.remove(); $('#status').textContent = 'Business account · replies in seconds';
+  bubble(j.reply || 'Sorry, something went wrong.', 'in');
+  ev('Reply written', 'Checked against the clinic notes and free slots · ' + ((performance.now() - t0) / 1000).toFixed(1) + ' s', 'ok');
+  if (j.action === 'book') ev('Booking added to the calendar', 'Front desk notified', 'hot');
+  if (j.action === 'handoff') ev('Handed over to a person', 'Front desk alerted', 'warn');
+};
+</script>
+</body>
+</html>

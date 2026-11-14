@@ -1,0 +1,1783 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AI Chatbot Live Demo</title>
+<meta name="description" content="Try an AI assistant for your business on WhatsApp, Instagram, Messenger, Telegram, your website or the phone.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<!-- live voice call: connect early so setup time isn't spent inside Vapi's ~15s join window -->
+<link rel="preconnect" href="https://api.vapi.ai" crossorigin>
+<link rel="preconnect" href="https://gs.daily.co" crossorigin>
+<link rel="preconnect" href="https://c.daily.co">
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Inter:wght@400;500;600&family=Instrument+Serif:ital@1&display=swap" rel="stylesheet">
+<script>document.documentElement.classList.add("js")</script>
+<style>
+:root{
+  --ink:#0f1024;--ink2:#4a4d6a;--mute:#8a8da8;--line:#e7e8f2;--bg:#f7f7fc;--card:#fff;
+  --brand:#5b4bff;--brand2:#9b5cff;--accent:#18c6a3;--wa:#25D366;
+  --r:18px;--shadow:0 20px 60px -20px rgba(40,30,120,.25),0 4px 14px rgba(20,20,60,.06);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:Inter,system-ui,sans-serif;color:var(--ink);background:var(--bg);-webkit-font-smoothing:antialiased;overflow-x:hidden}
+h1,h2,h3,.disp{font-family:"Plus Jakarta Sans",Inter,sans-serif;letter-spacing:-.02em}
+a{color:inherit;text-decoration:none}
+button{font:inherit;cursor:pointer;border:0;background:none;color:inherit}
+svg{width:20px;height:20px;flex-shrink:0}
+.wrap{max-width:1180px;margin:0 auto;padding:0 20px}
+
+/* stage */
+#demo{display:none;padding:26px 0 60px}
+body.demo #demo{display:block}
+body.demo .hero{display:none}
+.stagehead{text-align:center;margin-bottom:14px}
+.stagehead h2{font-size:clamp(22px,3vw,30px)}
+.stagehead p{color:var(--ink2);font-size:15px;margin-top:6px}
+.tools{display:none;align-items:center;justify-content:center;gap:10px;margin:0 auto 14px;flex-wrap:wrap;max-width:100%}
+.tools.on{display:flex}
+.tabs{display:flex;gap:6px;background:#fff;border:1px solid var(--line);border-radius:14px;padding:5px;overflow-x:auto;max-width:100%;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{display:flex;align-items:center;gap:7px;padding:8px 12px;border-radius:10px;font-size:13.5px;font-weight:600;color:var(--ink2);white-space:nowrap;transition:.15s}
+.tab i{width:9px;height:9px;border-radius:50%}
+.tab:hover{background:#f4f4fa}
+.tab.on{background:var(--ink);color:#fff}
+.hint{display:none;max-width:640px;margin:0 auto 18px;text-align:center;font-size:14px;color:var(--ink2);background:#fff;border:1px dashed #cfcbff;border-radius:12px;padding:10px 14px}
+.hint.on{display:block}
+.hint b{color:var(--brand)}
+.stage{display:flex;justify-content:center;align-items:flex-start;gap:28px}
+.side{width:300px;flex-shrink:0;background:#fff;border:1px solid var(--line);border-radius:20px;padding:18px;box-shadow:0 10px 30px -20px rgba(20,20,60,.3);align-self:stretch;display:none;flex-direction:column}
+.side.on{display:flex}
+.side h3{font-size:15px;display:flex;align-items:center;gap:8px}
+.side h3 b{width:8px;height:8px;border-radius:50%;background:#22c55e;animation:pulse 1.6s infinite}
+.side>p{font-size:12.5px;color:var(--mute);margin:4px 0 14px;line-height:1.45}
+#log{overflow-y:auto;display:flex;flex-direction:column;gap:8px;flex:1;min-height:60px}
+.lg{display:flex;gap:10px;font-size:13px;line-height:1.4;padding:10px;border-radius:12px;background:#f7f7fc;animation:pop .35s ease}
+.lg em{font-style:normal;font-size:16px}
+.lg small{display:block;color:var(--mute);font-size:11px;margin-top:2px}
+.lg.empty{background:none;color:var(--mute);justify-content:center}
+.side .fin-btn{margin-top:14px}
+@keyframes pulse{50%{opacity:.35}}
+@keyframes pop{from{opacity:0;transform:translateY(6px)}}
+
+/* device */
+.device{width:375px;max-width:100%;height:min(740px,calc(100vh - 290px));min-height:560px;border-radius:48px;background:#0d0d14;padding:11px;box-shadow:0 40px 80px -30px rgba(20,16,80,.45),inset 0 0 0 2px #2a2a36;flex-shrink:0;transition:width .4s}
+.screen{height:100%;border-radius:38px;overflow:hidden;display:flex;flex-direction:column;background:#fff;position:relative}
+.sbar{height:38px;display:flex;align-items:center;justify-content:space-between;padding:0 26px 0 30px;font:600 14px Inter;flex-shrink:0;position:relative}
+.sbar:after{content:"";position:absolute;left:50%;top:9px;transform:translateX(-50%);width:96px;height:24px;border-radius:20px;background:#0d0d14}
+.sbar .si{display:flex;gap:5px;align-items:center}
+.sbar .si i{display:block;width:16px;height:9px;border-radius:2px;border:1.5px solid currentColor;position:relative}
+.sbar .si i:after{content:"";position:absolute;inset:1px;right:4px;background:currentColor;border-radius:1px}
+.sbar .si s{display:block;width:15px;height:10px;background:linear-gradient(to top,currentColor 0 100%) left bottom/3px 40% no-repeat,linear-gradient(currentColor,currentColor) 4px bottom/3px 60% no-repeat,linear-gradient(currentColor,currentColor) 8px bottom/3px 80% no-repeat,linear-gradient(currentColor,currentColor) 12px bottom/3px 100% no-repeat}
+.croot{flex:1;min-height:0;display:flex;position:relative}
+.device.web{width:min(880px,100%);border-radius:16px;padding:0;background:#fff;box-shadow:0 40px 80px -30px rgba(20,16,80,.35);border:1px solid var(--line)}
+.device.web .screen{border-radius:16px}
+.device.web .sbar{display:none}
+.bbar{display:none;height:42px;background:#f1f1f6;border-bottom:1px solid var(--line);align-items:center;gap:8px;padding:0 14px;flex-shrink:0}
+.device.web .bbar{display:flex}
+.bbar i{width:11px;height:11px;border-radius:50%;background:#ff5f57}.bbar i:nth-child(2){background:#febc2e}.bbar i:nth-child(3){background:#28c840}
+.bbar span{flex:1;max-width:420px;margin:0 auto;background:#fff;border-radius:8px;height:26px;display:flex;align-items:center;padding:0 12px;font-size:12.5px;color:var(--mute)}
+.fsite{display:none}
+.device.web .fsite{display:flex;flex:1;flex-direction:column;padding:26px 30px;background:linear-gradient(160deg,#fafaff,#f1f0fb);min-width:0}
+.fsite .fn{display:flex;justify-content:space-between;align-items:center;font-weight:800;font-family:"Plus Jakarta Sans";font-size:17px;gap:10px}
+.fsite .fn span{display:flex;gap:16px;font:500 12.5px Inter;color:var(--mute)}
+.fsite h4{font:800 30px/1.1 "Plus Jakarta Sans";margin:46px 0 12px;max-width:340px}
+.fsite .sk{height:10px;border-radius:6px;background:#e4e3f0;margin-bottom:9px}
+.fsite .fb{margin-top:18px;width:150px;height:40px;border-radius:10px}
+.fsite .tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:auto}
+.fsite .tiles div{height:84px;border-radius:12px;background:#fff;border:1px solid var(--line)}
+.device.web .croot{flex:0 0 380px;border-left:1px solid var(--line);box-shadow:-20px 0 40px -30px rgba(0,0,0,.25)}
+.device.web .split{display:flex;flex:1;min-height:0}
+.split{display:flex;flex:1;min-height:0}
+
+/* chat base */
+.ch{display:flex;flex-direction:column;height:100%;width:100%;min-width:0;font-size:14.5px}
+.hd{display:flex;align-items:center;gap:10px;padding:8px 12px 10px;flex-shrink:0;min-height:58px}
+.hd .bk{opacity:.95}
+.hav{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;color:#fff;font:700 14px "Plus Jakarta Sans";flex-shrink:0}
+.hn{flex:1;min-width:0;line-height:1.2}
+.hn b{display:flex;align-items:center;gap:4px;font-size:15.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hn b svg{width:15px;height:15px}
+.hn span{font-size:12px;opacity:.8;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hic{display:flex;gap:16px;align-items:center}
+.hic svg{width:21px;height:21px}
+.msgs{flex:1;overflow-y:auto;padding:12px 12px 8px;display:flex;flex-direction:column;gap:3px;scroll-behavior:smooth}
+.msgs::-webkit-scrollbar{width:4px}.msgs::-webkit-scrollbar-thumb{background:rgba(0,0,0,.15);border-radius:4px}
+.msg{display:flex;max-width:84%;animation:pop .25s ease}
+.msg.me{align-self:flex-end}
+.msg.bot{align-self:flex-start}
+.msg+.msg.me:not(.me+.me),.msg.me+.msg.bot{margin-top:7px}
+.bub{padding:7px 11px;border-radius:14px;line-height:1.42;overflow-wrap:anywhere}
+.bub b{font-weight:600}
+.meta{font-size:10.5px;opacity:.55;float:right;margin:7px 0 -5px 10px;display:flex;align-items:center;gap:2px;white-space:nowrap}
+.meta svg{width:16px;height:16px}
+.tick{color:#8696a0;transition:color .3s}.tick.read{color:#53bdeb}
+.daypill{align-self:center;font-size:11.5px;padding:5px 12px;border-radius:8px;margin:2px 0 8px}
+.note{align-self:center;text-align:center;font-size:11.5px;line-height:1.4;padding:6px 12px;border-radius:8px;margin:0 16px 10px;max-width:290px}
+.typing .bub{display:flex;gap:4px;padding:12px 14px}
+.typing i{width:7px;height:7px;border-radius:50%;background:currentColor;opacity:.4;animation:dot 1.2s infinite}
+.typing i:nth-child(2){animation-delay:.15s}.typing i:nth-child(3){animation-delay:.3s}
+@keyframes dot{30%{opacity:1;transform:translateY(-3px)}}
+.chips{display:flex;animation:pop .3s ease;margin:4px 0 6px}
+.chips.qr{flex-wrap:wrap;justify-content:flex-end;gap:7px;align-self:flex-end;max-width:94%}
+.chips.qr button{padding:8px 14px;border-radius:99px;font-size:13.5px;font-weight:500;transition:.15s;text-align:left;line-height:1.3}
+.chips.att{flex-direction:column;gap:3px;align-self:flex-start;width:84%;max-width:290px;margin-top:2px}
+.chips.att button{padding:10px;border-radius:9px;font-size:14px;font-weight:500;text-align:center;transition:.15s}
+.comp{display:flex;align-items:center;gap:8px;padding:8px 10px 12px;flex-shrink:0}
+.comp input{flex:1;min-width:0;border:0;outline:0;font:inherit;font-size:15px;padding:11px 16px;border-radius:22px;background:#fff}
+.comp .sd{width:42px;height:42px;border-radius:50%;display:grid;place-items:center;flex-shrink:0;transition:.15s}
+.comp .sd svg{width:19px;height:19px}
+.comp.pulse input{animation:glow 1.6s ease 2}
+@keyframes glow{50%{box-shadow:0 0 0 4px rgba(91,75,255,.25)}}
+.card{min-width:220px}
+.card .ct{font-weight:700;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.card .row{display:flex;justify-content:space-between;gap:14px;padding:5px 0;border-top:1px solid rgba(0,0,0,.07);font-size:13.5px}
+.card .row span:first-child{opacity:.65}
+.card .row span:last-child{font-weight:600;text-align:right}
+.card .tot{font-weight:700}
+.card .okb{display:inline-flex;margin-top:4px;padding:3px 9px;border-radius:6px;background:rgba(34,197,94,.14);color:#15803d;font-size:12px;font-weight:700}
+.prop{display:flex;gap:10px;padding:8px 0;border-top:1px solid rgba(0,0,0,.07)}
+.prop:first-of-type{border:0}
+.prop i{width:54px;height:54px;border-radius:10px;display:grid;place-items:center;font-size:26px;font-style:normal;flex-shrink:0}
+.prop b{display:block;font-size:13.5px}
+.prop span{font-size:12px;opacity:.7}
+.prop strong{display:block;font-size:13.5px;margin-top:2px}
+.prog{display:flex;gap:4px;margin:10px 0 6px}
+.prog i{flex:1;height:5px;border-radius:4px;background:rgba(0,0,0,.1)}.prog i.on{background:#22c55e}
+.paybtn{display:block;text-align:center;margin-top:10px;padding:10px;border-radius:10px;background:#111;color:#fff !important;font-weight:600;font-size:13.5px;cursor:pointer}
+
+/* concierge skin */
+.ch-concierge .hd{background:linear-gradient(135deg,#1d1856,#3a2a9e);color:#fff}
+.ch-concierge .hav{background:linear-gradient(135deg,var(--brand),var(--brand2));box-shadow:0 0 0 2px rgba(255,255,255,.25)}
+.ch-concierge .msgs{background:#f6f6fd}
+.ch-concierge .bot .bub{background:#fff;border:1px solid #ecebf7;border-radius:4px 16px 16px 16px}
+.ch-concierge .me .bub{background:linear-gradient(135deg,var(--brand),var(--brand2));color:#fff;border-radius:16px 16px 4px 16px}
+.ch-concierge .chips.qr button{background:#fff;border:1.5px solid #d9d4ff;color:#3b2fd6}
+.ch-concierge .chips.qr button:hover{background:var(--brand);color:#fff;border-color:var(--brand)}
+.ch-concierge .comp{background:#f6f6fd;border-top:1px solid #ecebf7}
+.ch-concierge .comp input{border:1px solid #e3e1f5}
+.ch-concierge .sd{background:linear-gradient(135deg,var(--brand),var(--brand2));color:#fff}
+.ch-concierge .typing .bub{color:var(--brand)}
+.sbar.concierge{background:#1d1856;color:#fff}
+
+/* whatsapp */
+.sbar.wa{background:#008069;color:#fff}
+.ch-wa .hd{background:#008069;color:#fff}
+.ch-wa .hn b svg{color:#25D366}
+.ch-wa .msgs{background-color:#efeae2;background-image:radial-gradient(rgba(0,0,0,.045) 1.2px,transparent 1.3px),radial-gradient(rgba(0,0,0,.03) 1px,transparent 1.1px);background-size:22px 22px,15px 15px;background-position:0 0,7px 9px}
+.ch-wa .bub{border-radius:8px;box-shadow:0 1px .5px rgba(11,20,26,.13);font-size:14.2px}
+.ch-wa .bot .bub{background:#fff;border-top-left-radius:0}
+.ch-wa .me .bub{background:#d9fdd3;border-top-right-radius:0}
+.ch-wa .daypill{background:#fff;color:#54656f;box-shadow:0 1px .5px rgba(11,20,26,.13)}
+.ch-wa .note{background:#ffeecd;color:#54656f}
+.ch-wa .chips.att button{background:#fff;color:#027eb5;box-shadow:0 1px .5px rgba(11,20,26,.13)}
+.ch-wa .chips.att button:hover{background:#f5f6f6}
+.ch-wa .comp{background:#f0f2f5}
+.ch-wa .sd{background:#00a884;color:#fff}
+.ch-wa .typing .bub{color:#667781}
+
+/* instagram */
+.sbar.ig,.sbar.fb,.sbar.web{background:#fff;color:#000}
+.ch-ig .hd{background:#fff;border-bottom:1px solid #efefef}
+.ch-ig .hav{padding:2px;background:linear-gradient(45deg,#feda75,#fa7e1e,#d62976,#962fbf,#4f5bd5)}
+.ch-ig .hav span{width:100%;height:100%;border-radius:50%;display:grid;place-items:center;border:2px solid #fff;background:#222}
+.ch-ig .msgs{background:#fff}
+.ch-ig .bub{border-radius:20px;padding:9px 14px}
+.ch-ig .bot .bub{background:#efefef}
+.ch-ig .me .bub{background:linear-gradient(135deg,#7b3cff,#a63dfc 55%,#c838f0);color:#fff}
+.ch-ig .chips.qr button{background:#fff;border:1px solid #dbdbdb;color:#000}
+.ch-ig .chips.qr button:hover{background:#fafafa}
+.ch-ig .comp input{border:1px solid #dbdbdb}
+.ch-ig .sd{width:auto;border-radius:0;color:#0095f6;font-weight:600;font-size:15px;padding:0 4px}
+.ch-ig .daypill{color:#8e8e8e}
+.ch-ig .typing .bub{color:#8e8e8e}
+.igprof{text-align:center;padding:16px 0 18px}
+.igprof .hav{width:84px;height:84px;margin:0 auto 10px;font-size:28px}
+.igprof b{display:block;font-size:16px}.igprof span{display:block;font-size:13px;color:#737373;margin-top:2px}
+.igprof a{display:inline-block;margin-top:10px;padding:6px 14px;background:#efefef;border-radius:8px;font-size:13px;font-weight:600}
+
+/* messenger */
+.ch-fb .hd{background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.08);z-index:1}
+.ch-fb .hic,.ch-fb .bk{color:#0866ff}
+.ch-fb .hav{position:relative}
+.ch-fb .hav:after{content:"";position:absolute;right:0;bottom:0;width:11px;height:11px;border-radius:50%;background:#31a24c;border:2px solid #fff}
+.ch-fb .msgs{background:#fff}
+.ch-fb .bub{border-radius:18px;padding:8px 13px}
+.ch-fb .bot .bub{background:#f0f0f0}
+.ch-fb .me .bub{background:#0866ff;color:#fff}
+.ch-fb .chips.qr button{background:#fff;border:1px solid #0866ff;color:#0866ff}
+.ch-fb .chips.qr button:hover{background:#eef4ff}
+.ch-fb .comp input{background:#f0f2f5}
+.ch-fb .sd{color:#0866ff}
+.ch-fb .daypill{color:#65676b}
+.ch-fb .typing .bub{color:#65676b}
+
+/* telegram */
+.sbar.tg{background:#517da2;color:#fff}
+.ch-tg .hd{background:#517da2;color:#fff}
+.ch-tg .msgs{background:linear-gradient(160deg,#c9dcb0 0%,#a6c79a 45%,#8fb8a8 100%)}
+.ch-tg .bub{border-radius:12px;box-shadow:0 1px 1px rgba(0,0,0,.12)}
+.ch-tg .bot .bub{background:#fff;border-bottom-left-radius:4px}
+.ch-tg .me .bub{background:#effdde;border-bottom-right-radius:4px}
+.ch-tg .me .meta{color:#4fae4e;opacity:1}
+.ch-tg .daypill{background:rgba(0,0,0,.18);color:#fff;border-radius:12px}
+.ch-tg .chips.att{display:grid;grid-template-columns:1fr 1fr;gap:4px}
+.ch-tg .chips.att button{background:rgba(70,110,80,.42);color:#fff;backdrop-filter:blur(6px);font-size:13.5px;border-radius:8px}
+.ch-tg .chips.att button:only-child,.ch-tg .chips.att button.wide{grid-column:1/-1}
+.ch-tg .chips.att button:hover{background:rgba(60,95,70,.55)}
+.ch-tg .comp{background:#fff;border-top:1px solid #e6e6e6}
+.ch-tg .comp input{padding-left:6px}
+.ch-tg .sd{color:#3390ec}
+.ch-tg .typing .bub{color:#3390ec}
+
+/* website widget */
+.ch-web .hd{background:linear-gradient(135deg,var(--b),color-mix(in srgb,var(--b) 70%,#000));color:#fff;padding:14px 16px;min-height:66px}
+.ch-web .hav{background:rgba(255,255,255,.22)!important;box-shadow:0 0 0 2px rgba(255,255,255,.3)}
+.ch-web .msgs{background:#fbfbfe}
+.ch-web .bot .bub{background:#fff;border:1px solid #ececf3;border-radius:4px 16px 16px 16px}
+.ch-web .me .bub{background:var(--b);color:#fff;border-radius:16px 16px 4px 16px}
+.ch-web .chips.qr button{background:#fff;border:1.5px solid color-mix(in srgb,var(--b) 35%,#fff);color:var(--b)}
+.ch-web .chips.qr button:hover{background:var(--b);color:#fff}
+.ch-web .comp{background:#fff;border-top:1px solid #efeff5}
+.ch-web .comp input{background:#f4f4f8}
+.ch-web .sd{background:var(--b);color:#fff}
+.ch-web .typing .bub{color:var(--b)}
+.ch-web .pw{text-align:center;font-size:10.5px;color:var(--mute);padding:0 0 8px;background:#fff}
+.ch-web .hd .x{opacity:.85}
+
+/* voice */
+.call{flex:1;display:flex;flex-direction:column;align-items:center;padding:18px 18px 18px;background:radial-gradient(circle at 50% 20%,#3b2f8f,#14112e 70%);color:#fff;text-align:center;min-height:0}
+.sbar.voice{background:#2a2270;color:#fff}
+.call .cav{width:78px;height:78px;border-radius:50%;display:grid;place-items:center;font:800 32px "Plus Jakarta Sans";background:linear-gradient(135deg,#f59e0b,#ef4444);box-shadow:0 0 0 10px rgba(255,255,255,.06),0 0 0 22px rgba(255,255,255,.03);animation:ring 2s infinite}
+@keyframes ring{50%{box-shadow:0 0 0 14px rgba(255,255,255,.08),0 0 0 30px rgba(255,255,255,.03)}}
+.call h3{margin-top:16px;font-size:21px}
+.call .csub{opacity:.7;font-size:13.5px;margin-top:4px}
+.wave{display:flex;gap:4px;height:34px;align-items:center;margin:8px 0}
+.wave i{width:4px;border-radius:3px;background:#a5b4fc;height:6px}
+.wave.on i{animation:wv 1s ease-in-out infinite}
+.wave i:nth-child(2n){animation-delay:.2s}.wave i:nth-child(3n){animation-delay:.4s}.wave i:nth-child(5n){animation-delay:.1s}
+@keyframes wv{50%{height:30px}}
+.ctx{flex:1;width:100%;overflow-y:auto;display:flex;flex-direction:column;gap:8px;text-align:left;padding:4px 2px;min-height:0}
+.ctx div{font-size:13px;line-height:1.45;padding:8px 11px;border-radius:12px;background:rgba(255,255,255,.08);animation:pop .3s ease;max-width:90%}
+.ctx div.c{align-self:flex-end;background:rgba(165,180,252,.2)}
+.ctx div b{display:block;font-size:10.5px;opacity:.6;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px}
+.ctx .sys{align-self:center;background:none;opacity:.6;font-size:12px}
+.cbtns{display:flex;flex-direction:column;gap:10px;width:100%;margin-top:14px}
+.cbtns a{display:flex;align-items:center;justify-content:center;gap:8px;padding:13px;border-radius:14px;background:#fff;color:#1d1856;font-weight:700;font-size:14.5px}
+.cbtns button{display:flex;align-items:center;justify-content:center;gap:8px;padding:12px;border-radius:14px;background:#ef4444;color:#fff;font-weight:600}
+/* live (Vapi) call */
+.cbtns button.go{background:#22c55e;font-size:15.5px;font-weight:700;padding:14px;animation:glow 2s infinite}
+@keyframes glow{50%{box-shadow:0 0 0 8px rgba(34,197,94,.18)}}
+.cbtns button.go svg,.cbtns button svg{width:18px;height:18px}
+.cbtns button.go:disabled{opacity:.7;animation:none;cursor:wait}
+.cbtns .row{display:flex;gap:10px}.cbtns .row button{flex:1}
+.cbtns button.mute{background:rgba(255,255,255,.14)}
+.cbtns button.mute.on{background:#fff;color:#1d1856}
+.vpick{display:flex;gap:8px}
+.vpick button{flex:1;display:flex;flex-direction:column;align-items:center;gap:1px;padding:9px 6px;border-radius:12px;background:rgba(255,255,255,.08);border:1.5px solid rgba(255,255,255,.15);color:#fff;font-weight:600;font-size:13px}
+.vpick button small{font-size:11px;opacity:.65;font-weight:500}
+.vpick button.on{background:rgba(255,255,255,.95);color:#1d1856;border-color:#fff}
+.cbtns .ghost{background:none;color:#c7d2fe;font-weight:600;font-size:13px;padding:2px;text-decoration:underline;text-underline-offset:3px}
+.ctx .tip{align-self:stretch;max-width:none;background:rgba(255,255,255,.06);border:1px dashed rgba(255,255,255,.2);text-align:center}
+.ctx .tip ul{list-style:none;margin-top:6px;display:grid;gap:3px;opacity:.85}
+.ctx .err{align-self:stretch;max-width:none;background:rgba(239,68,68,.18);text-align:center}
+.lcta{width:100%;margin-top:12px;background:#fff;color:#1d1856;border-radius:16px;padding:14px;text-align:left;animation:pop .3s ease}
+.lcta b{display:block;font-size:15px}.lcta span{display:block;font-size:12.5px;color:#5b5f7a;margin:3px 0 10px;line-height:1.4}
+.lcta a{display:flex;align-items:center;justify-content:center;gap:8px;padding:11px;border-radius:12px;background:#25D366;color:#fff;font-weight:700;font-size:14px}
+.lcta .lk{display:flex;flex-wrap:wrap;justify-content:center;gap:4px 14px;margin-top:9px;font-size:12.5px}
+.call.ended{padding-top:12px}
+.call.ended .cav{width:46px;height:46px;font-size:18px;animation:none;box-shadow:none}
+.call.ended h3{margin-top:8px;font-size:17px}
+.call.ended .wave{display:none}
+.call.ended .lcta{padding:12px}.call.ended .lcta span{margin-bottom:8px}
+.lcta .lk button{background:none;color:#5b4bff;font-weight:600;padding:0;text-decoration:underline;text-underline-offset:3px}
+.cbtns button svg{transform:rotate(135deg)}
+
+/* floating */
+.fabs{position:fixed;right:22px;bottom:22px;z-index:60;display:flex;flex-direction:column;align-items:flex-end;gap:12px}
+.fab{width:58px;height:58px;border-radius:50%;display:grid;place-items:center;color:#fff;box-shadow:0 12px 28px -8px rgba(0,0,0,.35);transition:.2s;position:relative}
+.fab:hover{transform:scale(1.07)}
+.fab svg{width:27px;height:27px}
+.fab.wa{background:var(--wa);width:52px;height:52px}
+.fab.wa svg{width:25px;height:25px}
+.fab.cw{background:linear-gradient(135deg,var(--brand),var(--brand2))}
+.fab.cw .dot{position:absolute;top:2px;right:2px;width:14px;height:14px;border-radius:50%;background:#ef4444;border:2px solid #fff}
+.fab .tip{position:absolute;right:64px;top:50%;transform:translateY(-50%);background:var(--ink);color:#fff;font-size:12.5px;font-weight:600;padding:7px 11px;border-radius:8px;white-space:nowrap;opacity:0;pointer-events:none;transition:.2s}
+.fab:hover .tip{opacity:1}
+.teaser{position:absolute;right:70px;bottom:6px;background:#fff;border-radius:16px 16px 4px 16px;box-shadow:var(--shadow);padding:12px 32px 12px 14px;font-size:13.5px;width:230px;line-height:1.4;animation:pop .4s ease;cursor:pointer}
+.teaser b{color:var(--brand)}
+.teaser button{position:absolute;top:6px;right:8px;color:var(--mute);font-size:16px;line-height:1}
+#wpanel{position:fixed;right:22px;bottom:96px;width:380px;height:min(600px,calc(100vh - 130px));z-index:61;border-radius:22px;overflow:hidden;box-shadow:0 30px 70px -20px rgba(20,16,80,.45);background:#fff;display:none;transform-origin:bottom right;animation:wopen .3s ease}
+#wpanel.on{display:flex}
+@keyframes wopen{from{opacity:0;transform:scale(.9) translateY(10px)}}
+
+/* finale */
+.modal{position:fixed;inset:0;z-index:90;background:rgba(15,16,36,.6);backdrop-filter:blur(6px);display:none;align-items:flex-start;justify-content:center;padding:30px 16px;overflow-y:auto}
+.modal.on{display:flex}
+.fin{background:#fff;border-radius:26px;max-width:720px;width:100%;padding:40px;position:relative;animation:wopen .35s ease;margin:auto 0}
+.fin .xx{position:absolute;top:16px;right:18px;width:36px;height:36px;border-radius:50%;background:#f3f3f8;font-size:20px}
+.fin .conf{font-size:44px}
+.fin h2{font-size:clamp(24px,3.4vw,34px);line-height:1.15;margin:10px 0 10px}
+.fin>p{color:var(--ink2);line-height:1.6;font-size:15.5px}
+.ben{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:22px 0}
+.ben div{background:#f7f7fc;border-radius:14px;padding:14px;font-size:14px;line-height:1.45;display:flex;gap:10px}
+.ben em{font-style:normal;font-size:20px}
+.ben b{display:block}
+.more h4{font-size:14px;margin-bottom:10px;color:var(--ink2)}
+.tags{display:flex;flex-wrap:wrap;gap:8px}
+.tags span{padding:7px 12px;border-radius:99px;background:#f3f1ff;color:#3b2fd6;font-size:13px;font-weight:600}
+.vcard{margin:22px 0;padding:18px;border-radius:18px;background:linear-gradient(135deg,#17134a,#3a2a9e);color:#fff;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.vcard div{flex:1;min-width:200px}
+.vcard b{display:block;font-size:16px}.vcard span{font-size:13.5px;opacity:.8}
+.vcard a{background:#fff;color:#1d1856;padding:11px 16px;border-radius:12px;font-weight:700;font-size:14px;display:flex;gap:8px;align-items:center}
+.fin .cbs{justify-content:flex-start}
+.toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%) translateY(20px);background:var(--ink);color:#fff;padding:12px 18px;border-radius:12px;font-size:14px;z-index:100;opacity:0;transition:.3s;pointer-events:none;max-width:calc(100% - 32px);text-align:center}
+.toast.on{opacity:1;transform:translateX(-50%)}
+
+/* ===== landing funnel (dark, 3D) ===== */
+:root{--d-bg:#07071a;--d-s1:rgba(255,255,255,.045);--d-s2:rgba(255,255,255,.08);--d-b:rgba(255,255,255,.1);--d-tx:#f4f4ff;--d-mu:#a5a8c9;--mint:#3ee6bd;--g1:#6d5cff;--g2:#b45cff;--g3:#ff6fb5}
+body{background:var(--d-bg)}
+.serif{font-family:"Instrument Serif",Georgia,serif;font-style:italic;font-weight:400;letter-spacing:-.01em}
+
+/* nav */
+nav{position:sticky;top:0;z-index:40;background:rgba(7,7,26,.62);backdrop-filter:blur(16px) saturate(140%);-webkit-backdrop-filter:blur(16px) saturate(140%);border-bottom:1px solid rgba(255,255,255,.06);color:var(--d-tx)}
+nav .wrap{display:flex;align-items:center;justify-content:space-between;height:66px;gap:16px}
+.logo{display:flex;align-items:center;gap:10px;font-weight:800;font-family:"Plus Jakarta Sans";font-size:17px}
+.logo i{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,var(--g1),var(--g2));display:grid;place-items:center;color:#fff;font-style:normal;font-size:13px;box-shadow:0 6px 20px -4px rgba(109,92,255,.7)}
+.logo small{display:block;font:500 11.5px Inter;color:var(--d-mu);letter-spacing:0}
+.nlinks{display:flex;gap:6px;font-size:14px;color:var(--d-mu);font-weight:500;background:var(--d-s1);border:1px solid var(--d-b);border-radius:99px;padding:4px}
+.nlinks a{padding:7px 14px;border-radius:99px;transition:.2s}
+.nlinks a:hover,.nlinks a.on{color:#fff;background:var(--d-s2)}
+.nlinks a b{color:var(--g2);font-weight:600;margin-right:5px;font-size:12px}
+.ncta{display:flex;gap:8px;align-items:center}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:12px 20px;border-radius:12px;font-weight:600;font-size:15px;transition:.25s;white-space:nowrap}
+.btn.p{background:linear-gradient(135deg,var(--g1),var(--g2));color:#fff;box-shadow:0 10px 30px -8px rgba(109,92,255,.7),inset 0 1px 0 rgba(255,255,255,.25)}
+.btn.p:hover{transform:translateY(-2px);box-shadow:0 16px 40px -8px rgba(140,92,255,.85),inset 0 1px 0 rgba(255,255,255,.25)}
+.btn.g{background:var(--wa);color:#fff;box-shadow:0 10px 26px -10px rgba(37,211,102,.8)}
+.btn.g:hover{transform:translateY(-2px)}
+.btn.o{background:#fff;border:1px solid var(--line);color:var(--ink)}
+.btn.o:hover{border-color:var(--brand);color:var(--brand)}
+.lp .btn.o,nav .btn.o,#demo .btn.o{background:var(--d-s1);border:1px solid var(--d-b);color:var(--d-tx)}
+.lp .btn.o:hover,nav .btn.o:hover,#demo .btn.o:hover{background:var(--d-s2);border-color:rgba(255,255,255,.25);color:#fff}
+.btn.sm{padding:9px 14px;font-size:13.5px;border-radius:10px}
+.btn.lg{padding:17px 28px;font-size:16.5px;border-radius:14px}
+.btn .arr{transition:transform .25s}.btn:hover .arr{transform:translateX(4px)}
+
+/* shared landing bits */
+.lp{color:var(--d-tx);position:relative}
+.lp p{color:var(--d-mu)}
+.glass{background:linear-gradient(180deg,rgba(255,255,255,.065),rgba(255,255,255,.025));border:1px solid var(--d-b);border-radius:24px;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+.eyebrow{display:inline-flex;align-items:center;gap:9px;padding:7px 14px 7px 10px;border-radius:99px;background:var(--d-s1);border:1px solid var(--d-b);font-size:13px;font-weight:600;color:#dcdcf5}
+.eyebrow b{width:8px;height:8px;border-radius:50%;background:var(--mint);box-shadow:0 0 0 4px rgba(62,230,189,.18),0 0 12px var(--mint);animation:pulse 1.8s infinite}
+.grad{background:linear-gradient(110deg,#c9c2ff,var(--g2) 45%,var(--g3));-webkit-background-clip:text;background-clip:text;color:transparent}
+.bgfx{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+.bgfx .grid{position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.045) 1px,transparent 1px);background-size:64px 64px;-webkit-mask-image:radial-gradient(ellipse 70% 60% at 50% 40%,#000 30%,transparent 75%);mask-image:radial-gradient(ellipse 70% 60% at 50% 40%,#000 30%,transparent 75%)}
+.bgfx .glow{position:absolute;border-radius:50%;filter:blur(90px);opacity:.55}
+.step-k{display:inline-flex;align-items:center;gap:12px;font:600 13px Inter;letter-spacing:.14em;text-transform:uppercase;color:var(--d-mu)}
+.step-k b{font:500 15px "Plus Jakarta Sans";letter-spacing:0;color:#fff;width:38px;height:38px;border-radius:12px;display:grid;place-items:center;background:var(--d-s2);border:1px solid var(--d-b)}
+.lp h2{font-size:clamp(32px,4.6vw,56px);line-height:1.04;font-weight:800;margin:18px 0 16px;color:#fff}
+.lp h2 .serif{font-size:1.08em}
+.sec-lead{font-size:18px;line-height:1.6;max-width:560px}
+.next{display:inline-flex;align-items:center;gap:10px;margin-top:34px;font-weight:600;color:#fff;font-size:15px}
+.next i{width:36px;height:36px;border-radius:50%;border:1px solid var(--d-b);display:grid;place-items:center;background:var(--d-s1);animation:bob 2s ease-in-out infinite}
+.next i svg{width:16px;height:16px}
+@keyframes bob{50%{transform:translateY(5px)}}
+section.sec{padding:120px 0;position:relative}
+
+/* hero */
+.hero{position:relative;min-height:calc(100svh - 66px);display:flex;align-items:center;padding:56px 0 90px;overflow:hidden}
+.hero .wrap{position:relative;display:grid;grid-template-columns:1.08fr .92fr;gap:40px;align-items:center;width:100%}
+.hero h1{font-size:clamp(42px,6.2vw,80px);line-height:.98;margin:24px 0 22px;font-weight:800;color:#fff;letter-spacing:-.035em}
+.hero h1 .serif{font-size:1.1em;letter-spacing:-.02em}
+.hero .lead{font-size:clamp(16.5px,1.5vw,19px);line-height:1.6;max-width:540px}
+.hero .lead b{color:#fff;font-weight:600}
+.hcta{display:flex;gap:12px;margin:34px 0 18px;flex-wrap:wrap}
+.micro{display:flex;gap:18px;flex-wrap:wrap;font-size:13.5px;color:var(--d-mu)}
+.micro span{display:flex;align-items:center;gap:7px}
+.micro span:before{content:"✓";display:grid;place-items:center;width:18px;height:18px;border-radius:50%;background:rgba(62,230,189,.16);color:var(--mint);font-size:10px;font-weight:800}
+.works{margin-top:40px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;font-size:12.5px;color:var(--d-mu)}
+.works .ws{display:flex;gap:8px;flex-wrap:wrap}
+.works .ws span{display:flex;align-items:center;gap:6px;padding:6px 10px;border-radius:99px;background:var(--d-s1);border:1px solid var(--d-b);color:#d9d9f2;font-weight:500}
+.works .ws i{width:8px;height:8px;border-radius:50%}
+
+/* 3D scene */
+.scene{position:relative;height:620px;perspective:1400px}
+.s3d{position:absolute;inset:0;transform-style:preserve-3d;transform:rotateY(calc(-14deg + var(--ry,0deg))) rotateX(calc(8deg + var(--rx,0deg)));transition:transform .5s cubic-bezier(.2,.7,.2,1)}
+.p3{position:absolute;left:50%;top:50%;width:286px;height:574px;margin:-287px 0 0 -143px;border-radius:46px;background:linear-gradient(145deg,#2b2b3d,#0b0b12 60%);padding:10px;box-shadow:0 60px 120px -30px rgba(80,60,255,.55),0 30px 60px -20px rgba(0,0,0,.8),inset 0 0 0 1.5px rgba(255,255,255,.12);transform:translateZ(0)}
+.p3:after{content:"";position:absolute;inset:0;border-radius:46px;background:linear-gradient(115deg,rgba(255,255,255,.14),transparent 30%);pointer-events:none}
+.p3 .scr{height:100%;border-radius:37px;overflow:hidden;background:#efeae2;display:flex;flex-direction:column;position:relative}
+.p3 .isl{position:absolute;top:9px;left:50%;transform:translateX(-50%);width:86px;height:24px;border-radius:20px;background:#000;z-index:2}
+.p3 .top{background:#075e54;color:#fff;padding:44px 14px 11px;display:flex;align-items:center;gap:10px}
+.p3 .top .av{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--g1),var(--g2));display:grid;place-items:center;font:700 13px "Plus Jakarta Sans"}
+.p3 .top b{display:block;font-size:14.5px;max-width:170px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.p3 .top span{font-size:11.5px;opacity:.85}
+.p3 .msgs{flex:1;padding:14px 10px;display:flex;flex-direction:column;gap:7px;font-size:13px;color:#111;background:#efeae2 radial-gradient(rgba(0,0,0,.035) 1px,transparent 1px) 0 0/14px 14px}
+.p3 .m{max-width:82%;padding:7px 10px 6px;border-radius:10px;line-height:1.38;box-shadow:0 1px 1px rgba(0,0,0,.08);opacity:0;transform:translateY(8px) scale(.97);animation:min .5s cubic-bezier(.2,.7,.2,1) forwards}
+.p3 .m small{display:block;text-align:right;font-size:9.5px;color:#7a7a7a;margin-top:2px}
+.p3 .m.u{background:#fff;align-self:flex-start;border-top-left-radius:2px}
+.p3 .m.a{background:#d9fdd3;align-self:flex-end;border-top-right-radius:2px}
+.p3 .m:nth-child(1){animation-delay:.6s}.p3 .m:nth-child(2){animation-delay:1.7s}.p3 .m:nth-child(3){animation-delay:3s}.p3 .m:nth-child(4){animation-delay:4.1s}
+@keyframes min{to{opacity:1;transform:none}}
+.p3 .bar{padding:8px 10px 14px;display:flex;gap:8px;align-items:center}
+.p3 .bar span{flex:1;height:34px;border-radius:20px;background:#fff}
+.p3 .bar i{width:34px;height:34px;border-radius:50%;background:#00a884}
+.c3{position:absolute;display:flex;align-items:center;gap:11px;padding:12px 15px 12px 12px;border-radius:18px;color:#fff;font-size:13px;white-space:nowrap;background:linear-gradient(180deg,rgba(40,36,90,.78),rgba(20,18,50,.78));border:1px solid rgba(255,255,255,.14);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);box-shadow:0 30px 50px -20px rgba(0,0,0,.7),inset 0 1px 0 rgba(255,255,255,.12);animation:fl 7s ease-in-out infinite}
+.c3 em{font-style:normal;width:34px;height:34px;border-radius:11px;display:grid;place-items:center;font-size:16px}
+.c3 b{display:block;font-weight:600;font-size:13.5px}.c3 span{color:var(--d-mu);font-size:11.5px}
+.c3.k1{top:72px;left:-6%;transform:translateZ(120px)}.c3.k2{top:46%;right:-8%;transform:translateZ(170px);animation-delay:-2.3s}.c3.k3{bottom:70px;left:0;transform:translateZ(90px);animation-delay:-4.6s}
+@keyframes fl{50%{translate:0 -12px}}
+.orb{position:absolute;border-radius:50%;background:radial-gradient(circle at 32% 28%,#fff 0,#d8ccff 8%,var(--g1) 34%,#2a1a7a 70%,#120a3a 100%);box-shadow:0 30px 60px -10px rgba(109,92,255,.6),inset -10px -14px 30px rgba(0,0,0,.45);animation:fl 9s ease-in-out infinite}
+.orb.o1{width:88px;height:88px;top:6px;right:8%;transform:translateZ(-80px)}
+.orb.o2{width:46px;height:46px;bottom:36px;right:18%;transform:translateZ(60px);animation-delay:-3s;background:radial-gradient(circle at 32% 28%,#fff 0,#ffd6ec 10%,var(--g3) 40%,#7a1a52 78%,#2a0a20 100%)}
+.ring{position:absolute;left:50%;top:50%;width:520px;height:520px;margin:-260px 0 0 -260px;border-radius:50%;border:1px solid rgba(160,140,255,.22);transform:translateZ(-160px) rotateX(70deg);box-shadow:0 0 60px rgba(109,92,255,.25) inset}
+.ring.r2{width:640px;height:640px;margin:-320px 0 0 -320px;border-color:rgba(160,140,255,.12);animation:spin 40s linear infinite}
+@keyframes spin{to{transform:translateZ(-160px) rotateX(70deg) rotateZ(360deg)}}
+
+/* progress rail */
+.rail{position:fixed;right:22px;top:50%;transform:translateY(-50%);z-index:30;display:flex;flex-direction:column;gap:6px;padding:8px;border-radius:99px;background:rgba(7,7,26,.5);border:1px solid var(--d-b);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+.rail a{position:relative;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font:600 11px Inter;color:var(--d-mu);transition:.25s}
+.rail a.on{background:linear-gradient(135deg,var(--g1),var(--g2));color:#fff;box-shadow:0 0 18px rgba(140,92,255,.7)}
+.rail a span{position:absolute;right:40px;white-space:nowrap;background:#16163a;color:#fff;padding:5px 10px;border-radius:8px;font-size:12px;opacity:0;pointer-events:none;transition:.2s;transform:translateX(6px)}
+.rail a:hover span{opacity:1;transform:none}
+
+/* 01 problem */
+.moments{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:50px}
+.mo{padding:24px;position:relative;overflow:hidden;transition:transform .4s cubic-bezier(.2,.7,.2,1),border-color .3s}
+.mo:hover{border-color:rgba(255,255,255,.2)}
+.mo .when{display:flex;align-items:center;justify-content:space-between;font-size:12.5px;color:var(--d-mu);margin-bottom:16px}
+.mo .when b{font:700 22px "Plus Jakarta Sans";color:#fff;letter-spacing:-.02em}
+.mo .ask{background:rgba(255,255,255,.07);border-radius:14px 14px 14px 4px;padding:11px 13px;font-size:14px;color:#fff;margin-bottom:16px;line-height:1.45}
+.mo .row{display:flex;gap:10px;font-size:13.5px;line-height:1.45;padding:10px 0;border-top:1px dashed rgba(255,255,255,.1)}
+.mo .row i{font-style:normal;flex-shrink:0;width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-size:11px;font-weight:800}
+.mo .no i{background:rgba(255,92,120,.16);color:#ff7a92}.mo .no span{color:var(--d-mu)}
+.mo .yes i{background:rgba(62,230,189,.16);color:var(--mint)}.mo .yes span{color:#fff}
+
+/* 02 try */
+.try{display:grid;grid-template-columns:.9fr 1.1fr;gap:56px;align-items:center}
+.mini{list-style:none;display:grid;gap:14px;margin:28px 0 32px}
+.mini li{display:flex;gap:14px;align-items:flex-start;font-size:15px;color:var(--d-mu);line-height:1.45}
+.mini li b{display:block;color:#fff;font-size:15.5px;margin-bottom:1px}
+.mini li em{font-style:normal;flex-shrink:0;width:32px;height:32px;border-radius:10px;display:grid;place-items:center;background:var(--d-s2);border:1px solid var(--d-b);color:#fff;font:600 13px "Plus Jakarta Sans"}
+.chwrap{padding:22px;perspective:1200px}
+.chgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.chc{background:var(--d-s1);border:1px solid var(--d-b);border-radius:18px;padding:22px 12px 18px;text-align:center;transition:transform .35s cubic-bezier(.2,.7,.2,1),background .3s,border-color .3s,box-shadow .3s;cursor:pointer;color:#fff}
+.chc:hover{transform:translateY(-6px) rotateX(8deg);background:var(--d-s2);border-color:rgba(255,255,255,.22);box-shadow:0 24px 40px -20px rgba(0,0,0,.8)}
+.chc i{width:50px;height:50px;border-radius:15px;display:grid;place-items:center;margin:0 auto 12px;color:#fff;box-shadow:0 12px 24px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.3)}
+.chc i svg{width:24px;height:24px}
+.chc b{display:block;font-size:14.5px}
+.chc span{font-size:12px;color:var(--d-mu)}
+.chfoot{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:16px;padding-top:16px;border-top:1px solid var(--d-b);font-size:13px;color:var(--d-mu);flex-wrap:wrap}
+
+/* 03 voice */
+.vcall{display:grid;grid-template-columns:1.1fr .9fr;gap:40px;align-items:center;padding:56px;position:relative;overflow:hidden}
+.vcall:before{content:"";position:absolute;right:-120px;top:-120px;width:460px;height:460px;border-radius:50%;background:radial-gradient(rgba(245,158,11,.28),transparent 65%);pointer-events:none}
+.vcall ul{list-style:none;margin:22px 0 30px;display:grid;gap:10px;font-size:15.5px;color:#e6e6fa}
+.vcall li{display:flex;gap:10px;align-items:center}
+.vcall li:before{content:"✓";display:grid;place-items:center;width:20px;height:20px;border-radius:50%;background:rgba(62,230,189,.18);color:var(--mint);font-size:11px;font-weight:800;flex-shrink:0}
+.vbtn{background:#fff;color:#1d1856;box-shadow:0 14px 34px -10px rgba(255,255,255,.35)}
+.vbtn:hover{transform:translateY(-2px)}
+.vplay{position:relative;z-index:1;aspect-ratio:1;max-width:340px;width:100%;margin:0 auto;display:grid;place-items:center;text-align:center;cursor:pointer}
+.vplay .sph{position:absolute;inset:14%;border-radius:50%;background:radial-gradient(circle at 34% 28%,#fff 0,#ffe3b3 7%,#f59e0b 30%,#c2410c 62%,#3a1206 100%);box-shadow:0 40px 80px -20px rgba(245,158,11,.55),inset -18px -24px 50px rgba(0,0,0,.45);animation:breathe 4s ease-in-out infinite}
+.vplay .rg{position:absolute;inset:0;border-radius:50%;border:1px solid rgba(255,200,120,.3);animation:ripple 3s ease-out infinite}
+.vplay .rg.b{animation-delay:1.5s}
+@keyframes breathe{50%{transform:scale(1.04)}}
+@keyframes ripple{from{transform:scale(.7);opacity:1}to{transform:scale(1.15);opacity:0}}
+.vplay .in{position:relative;z-index:1;color:#fff}
+.vplay .in i{width:66px;height:66px;border-radius:50%;background:rgba(255,255,255,.95);color:#c2410c;display:grid;place-items:center;margin:0 auto 10px;box-shadow:0 10px 30px rgba(0,0,0,.35);transition:.25s}
+.vplay:hover .in i{transform:scale(1.08)}
+.vplay .in i svg{width:28px;height:28px}
+.vplay .in b{display:block;font-size:16px;text-shadow:0 2px 10px rgba(0,0,0,.4)}.vplay .in span{font-size:12.5px;opacity:.85}
+
+/* 04 get yours */
+.how{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin:46px 0 22px;position:relative}
+.how div{padding:24px;position:relative}
+.how em{font-style:normal;display:inline-grid;place-items:center;width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,var(--g1),var(--g2));color:#fff;font:700 15px "Plus Jakarta Sans";margin-bottom:14px;box-shadow:0 10px 24px -8px rgba(109,92,255,.7)}
+.how h3{font-size:18px;color:#fff;margin-bottom:6px}
+.how p{font-size:14.5px;line-height:1.55}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:56px}
+.chips span{padding:8px 13px;border-radius:99px;background:var(--d-s1);border:1px solid var(--d-b);font-size:13.5px;color:#dedef5}
+.final{position:relative;text-align:center;padding:64px 28px;border-radius:30px;overflow:hidden;background:radial-gradient(600px 300px at 50% 0%,rgba(140,92,255,.35),transparent 70%),linear-gradient(180deg,rgba(255,255,255,.07),rgba(255,255,255,.02));border:1px solid rgba(255,255,255,.14)}
+.final h2{margin-top:0}
+.final p{max-width:540px;margin:0 auto 30px;font-size:17px;line-height:1.6}
+.cbs{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+.cinfo{display:flex;gap:26px;justify-content:center;flex-wrap:wrap;margin-top:24px;font-size:14px;color:var(--d-mu)}
+.cinfo a{display:flex;align-items:center;gap:7px}
+.cinfo a:hover{color:#fff}
+footer{padding:36px 0 110px;text-align:center;color:var(--d-mu);font-size:13px;border-top:1px solid rgba(255,255,255,.06)}
+
+/* scroll reveal (only when JS runs) */
+html.js .rv{opacity:0;transform:translateY(28px);transition:opacity .9s cubic-bezier(.2,.7,.2,1),transform .9s cubic-bezier(.2,.7,.2,1)}
+html.js .rv.in{opacity:1;transform:none}
+.d1{transition-delay:.08s!important}.d2{transition-delay:.16s!important}.d3{transition-delay:.24s!important}
+
+/* demo mode: the funnel steps aside for the demo stage */
+body.demo .lp,body.demo .rail{display:none}
+#demo .stagehead{color:#fff}
+#demo .stagehead p{color:var(--d-mu)}
+#demo .device{box-shadow:0 50px 100px -30px rgba(109,92,255,.5),0 30px 60px -20px rgba(0,0,0,.8),inset 0 0 0 2px #2a2a36}
+
+@media (prefers-reduced-motion:reduce){
+  *,*:before,*:after{animation:none!important;transition:none!important}
+  html.js .rv{opacity:1;transform:none}
+  .p3 .m{opacity:1;transform:none}
+}
+
+@media (max-width:1060px){
+  .side{display:none!important}
+  .chgrid{grid-template-columns:repeat(3,1fr)}
+}
+@media (max-width:900px){
+  .hero .wrap,.voice{grid-template-columns:1fr}
+  .hvis{display:none}
+  .nlinks{display:none}
+  .fgrid{grid-template-columns:1fr 1fr}
+  .device.web .fsite{display:none}
+  .device.web{width:400px}
+  .device.web .croot{flex:1;border:0}
+  .voice{padding:36px 26px}
+}
+@media (max-width:600px){
+  .wrap{padding:0 16px}
+  .hero{padding:40px 0 50px}
+  .steps3{grid-template-columns:1fr}
+  .fgrid,.ben{grid-template-columns:1fr}
+  .chgrid{grid-template-columns:repeat(2,1fr)}
+  .device{border-radius:34px;padding:7px;height:calc(100svh - 190px);min-height:520px}
+  .screen{border-radius:28px}
+  .device.web{width:100%}
+  nav .btn span{display:none}
+  .fin,.contact{padding:28px 20px}
+  section.sec{padding:56px 0}
+  #wpanel{right:0;bottom:0;width:100%;height:100svh;border-radius:0}
+  .fabs{right:14px;bottom:14px}
+  #wpanel.on~.fabs,body.demo .fabs{display:none}
+}
+
+
+/* landing responsive */
+@media (max-width:1060px){
+  .hero .wrap{grid-template-columns:1fr;gap:10px}
+  .scene{height:560px;max-width:560px;width:100%;margin:0 auto}
+  .rail{display:none}
+  .try,.vcall{grid-template-columns:1fr}
+  .chgrid{grid-template-columns:repeat(3,1fr)}
+}
+@media (max-width:900px){
+  .nlinks{display:none}
+  .moments,.how{grid-template-columns:1fr}
+  .vcall{padding:38px 24px;gap:10px}
+}
+@media (max-width:600px){
+  .hero{padding:30px 0 50px;min-height:0}
+  .hero h1{font-size:clamp(38px,11vw,46px)}
+  .scene{height:480px;transform:scale(.84);margin-top:-20px}
+  .c3.k1{left:-2%}.c3.k2{right:-4%}.c3.k3{left:2%}
+  section.sec{padding:80px 0}
+  .chgrid{grid-template-columns:repeat(2,1fr)}
+  .chwrap{padding:14px}
+  .final{padding:44px 18px}
+  .ncta .btn.p{padding:9px 12px}
+  .logo small{display:none}
+  .hcta .btn{width:100%}
+}
+</style>
+</head>
+<body>
+<nav>
+  <div class="wrap">
+    <a class="logo" href="#" onclick="App.home();return false"><i>SO</i><div>Simeon O.<small>AI Chat &amp; Voice Automation</small></div></a>
+    <div class="nlinks" id="nlinks"><a href="#problem"><b>01</b>Why</a><a href="#try"><b>02</b>Try it</a><a href="#voice"><b>03</b>Call it</a><a href="#contact"><b>04</b>Get yours</a></div>
+    <div class="ncta">
+      <button class="btn p sm" onclick="App.start()">Try the demo</button>
+      <a class="btn g sm" id="navwa" target="_blank" rel="noopener" aria-label="WhatsApp Simeon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm5.3 14.1c-.2.6-1.3 1.2-1.8 1.3-.5 0-1 .2-3.2-.7-2.7-1.1-4.4-3.8-4.5-4-.1-.2-1.1-1.4-1.1-2.7s.7-1.9.9-2.2c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.9 2c.1.2.1.4 0 .6l-.4.6-.4.4c-.1.1-.3.3-.1.6.2.3.8 1.3 1.6 2 1.1 1 2 1.3 2.3 1.4.3.1.5.1.6-.1l.9-1c.2-.3.4-.2.7-.1l1.9.9c.3.1.5.2.5.3.1.2.1.8-.1 1.4z"/></svg></a>
+    </div>
+  </div>
+</nav>
+
+<nav class="rail" id="rail" aria-label="Progress">
+  <a href="#top" data-s="top">↑<span>Start</span></a>
+  <a href="#problem" data-s="problem">01<span>Why it matters</span></a>
+  <a href="#try" data-s="try">02<span>Try it as a customer</span></a>
+  <a href="#voice" data-s="voice">03<span>Call it live</span></a>
+  <a href="#contact" data-s="contact">04<span>Get yours</span></a>
+</nav>
+
+<header class="hero lp" id="top">
+  <div class="bgfx" aria-hidden="true"><div class="grid"></div><div class="glow" style="width:520px;height:520px;left:-140px;top:-120px;background:#5b3dff"></div><div class="glow" style="width:460px;height:460px;right:-120px;top:120px;background:#b03dff;opacity:.4"></div><div class="glow" style="width:380px;height:380px;left:35%;bottom:-200px;background:#14b8a6;opacity:.25"></div></div>
+  <div class="wrap">
+    <div>
+      <span class="eyebrow rv"><b></b><span id="hEyebrow">Live demo · ready in 2 minutes</span></span>
+      <h1 class="rv d1" id="hTitle">Your next customer is messaging <span class="serif grad">right now.</span></h1>
+      <p class="lead rv d2">I build <b>AI receptionists</b> that answer WhatsApp, Instagram, website chat and phone calls in seconds. They book appointments, take orders and send you every lead, <b>day and night</b>.</p>
+      <div class="hcta rv d3">
+        <button class="btn p lg" onclick="App.start()">Try it as your customer <svg class="arr" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+        <a class="btn o lg" href="#voice" id="heroVoice">📞 Hear it on a call</a>
+      </div>
+      <div class="micro rv d3"><span>No sign-up</span><span>Takes 2 minutes</span><span>Works on your phone</span></div>
+      <div class="works rv d3">Works with <div class="ws"><span><i style="background:#25D366"></i>WhatsApp</span><span><i style="background:#E1306C"></i>Instagram</span><span><i style="background:#0866FF"></i>Messenger</span><span><i style="background:#f59e0b"></i>Phone calls</span><span><i style="background:#4285F4"></i>Google Calendar</span></div></div>
+    </div>
+    <div class="scene" id="scene" aria-hidden="true">
+      <div class="s3d" id="s3d">
+        <div class="ring"></div><div class="ring r2"></div>
+        <div class="orb o1"></div>
+        <div class="p3"><div class="scr"><div class="isl"></div>
+          <div class="top"><div class="av" id="p3av">XI</div><div><b id="p3biz">XLNTInnovators</b><span>AI assistant · online</span></div></div>
+          <div class="msgs">
+            <div class="m u">Hi! Are you open on Sunday? 🙏<small>11:48 PM</small></div>
+            <div class="m a">We are, 10am–4pm 😊 Want me to book you in?<small>11:48 PM ✓✓</small></div>
+            <div class="m u">Yes please, 2pm<small>11:49 PM</small></div>
+            <div class="m a">Done ✅ You're booked for Sunday at 2pm. See you then!<small>11:49 PM ✓✓</small></div>
+          </div>
+          <div class="bar"><span></span><i></i></div>
+        </div></div>
+        <div class="c3 k1"><em style="background:rgba(37,211,102,.2)">⚡</em><div><b>Replied in 2 seconds</b><span>while you were asleep</span></div></div>
+        <div class="c3 k2"><em style="background:rgba(245,158,11,.2)">📅</em><div><b>Booking added</b><span>Sunday · 2:00 PM</span></div></div>
+        <div class="c3 k3"><em style="background:rgba(109,92,255,.25)">📇</em><div><b>New lead saved</b><span>name + number → your CRM</span></div></div>
+        <div class="orb o2"></div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<section id="demo">
+  <div class="wrap">
+    <div class="stagehead"><h2 id="sTitle">Let's set up your demo</h2><p id="sSub">Answer a couple of quick questions and your assistant will be ready.</p></div>
+    <div class="tools" id="tools">
+      <div class="tabs" id="tabs"></div>
+      <button class="btn o sm" onclick="App.restart()">↺ Start over</button>
+      <button class="btn p sm" onclick="App.finale()">Finish demo</button>
+    </div>
+    <div class="hint" id="hint"></div>
+    <div class="stage">
+      <div class="device" id="device">
+        <div class="screen">
+          <div class="sbar concierge" id="sbar"><span id="clock">9:41</span><span class="si"><s></s><i></i></span></div>
+          <div class="bbar"><i></i><i></i><i></i><span id="burl">yourbusiness.com</span></div>
+          <div class="split">
+            <div class="fsite" id="fsite"></div>
+            <div class="croot" id="croot"></div>
+          </div>
+        </div>
+      </div>
+      <aside class="side" id="side">
+        <h3><b></b> Behind the scenes</h3>
+        <p>What happens automatically while your customer chats — no staff needed.</p>
+        <div id="log"></div>
+        <button class="btn p sm fin-btn" onclick="App.finale()">I've seen enough — what's next?</button>
+      </aside>
+    </div>
+  </div>
+</section>
+
+<section class="sec lp" id="problem">
+  <div class="wrap">
+    <span class="step-k rv"><b>01</b>Why it matters</span>
+    <h2 class="rv d1">Every unanswered message is a customer <span class="serif grad">walking to a competitor.</span></h2>
+    <p class="sec-lead rv d2">People message when it suits <i>them</i>: late at night, at lunch, on Sunday. Whoever replies first usually gets the booking.</p>
+    <div class="moments">
+      <div class="mo glass rv tilt"><div class="when"><b>11:48 PM</b>Instagram DM</div><div class="ask">“How much is a full set? Can I come in tomorrow?”</div><div class="row no"><i>✕</i><span>No reply until 9am. They booked somewhere else.</span></div><div class="row yes"><i>✓</i><span>AI replies in 2 seconds with the price and books them in.</span></div></div>
+      <div class="mo glass rv d1 tilt"><div class="when"><b>1:15 PM</b>Phone call</div><div class="ask">“Hi, I'd like to book for Friday…” <span style="opacity:.6">(line busy)</span></div><div class="row no"><i>✕</i><span>Rings out while your team is with a customer.</span></div><div class="row yes"><i>✓</i><span>AI picks up, books Friday and texts a confirmation.</span></div></div>
+      <div class="mo glass rv d2 tilt"><div class="when"><b>Sun 10:02 AM</b>WhatsApp</div><div class="ask">“Do you deliver? What are your prices?”</div><div class="row no"><i>✕</i><span>Seen on Monday. The lead has gone cold.</span></div><div class="row yes"><i>✓</i><span>AI answers, takes the order and saves the lead for you.</span></div></div>
+    </div>
+    <a class="next rv" href="#try"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M6 13l6 6 6-6"/></svg></i>See how it would handle <span class="bizName">your</span> customers</a>
+  </div>
+</section>
+
+<section class="sec lp" id="try">
+  <div class="bgfx" aria-hidden="true"><div class="glow" style="width:480px;height:480px;right:-160px;top:10%;background:#5b3dff;opacity:.35"></div></div>
+  <div class="wrap try">
+    <div>
+      <span class="step-k rv"><b>02</b>Try it yourself</span>
+      <h2 class="rv d1">Be the customer. <span class="serif grad">Watch it work.</span></h2>
+      <p class="sec-lead rv d2">The demo is set up for <b class="bizName" style="color:#fff">your business</b>. Pick an app and message it like a customer would.</p>
+      <ul class="mini rv d2">
+        <li><em>1</em><div><b>Pick your type of business</b>Salon, clinic, restaurant, shop, gym and more.</div></li>
+        <li><em>2</em><div><b>Choose a channel</b>WhatsApp, Instagram, Messenger, Telegram, website or phone.</div></li>
+        <li><em>3</em><div><b>Book, order or ask anything</b>See the bookings and leads appear live behind the scenes.</div></li>
+      </ul>
+      <button class="btn p lg rv d3" onclick="App.start()">Start the 2-minute demo <svg class="arr" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+    </div>
+    <div class="chwrap glass rv d2">
+      <div class="chgrid" id="chgrid"></div>
+      <div class="chfoot"><span>One AI brain, every channel. You see every conversation in one place.</span><span>Tap any app to start →</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="sec lp" id="voice">
+  <div class="wrap">
+    <div class="vcall glass">
+      <div style="position:relative;z-index:1">
+        <span class="step-k rv"><b>03</b>Prefer phone calls?</span>
+        <h2 class="rv d1">Call it. <span class="serif grad">It answers like your best receptionist.</span></h2>
+        <p class="sec-lead rv d2">The same assistant picks up your phone. It talks naturally, books appointments and takes messages, so you never lose a caller because the line was busy.</p>
+        <ul class="rv d2"><li>Answers every call, day or night</li><li>Books, reschedules and confirms appointments</li><li>Sends you a summary of every call</li></ul>
+        <a class="btn lg vbtn rv d3" id="vbtn" target="_blank" rel="noopener">▶ Watch the recorded call</a>
+      </div>
+      <a class="vplay rv d2" id="vplay" target="_blank" rel="noopener"><div class="rg"></div><div class="rg b"></div><div class="sph"></div><div class="in"><i><svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4v16l13-8z"/></svg></i><b>Voice agent demo</b><span>Real recorded call · opens in a new tab</span></div></a>
+    </div>
+  </div>
+</section>
+
+<section class="sec lp" id="contact">
+  <div class="bgfx" aria-hidden="true"><div class="glow" style="width:560px;height:560px;left:50%;margin-left:-280px;bottom:-200px;background:#6d3dff;opacity:.35"></div></div>
+  <div class="wrap">
+    <span class="step-k rv"><b>04</b>Get yours</span>
+    <h2 class="rv d1">Live for <span class="bizName">your business</span> <span class="serif grad">in a few days.</span></h2>
+    <div class="how">
+      <div class="glass rv"><em>1</em><h3>Quick chat</h3><p>Message me on WhatsApp. Tell me how customers reach you and what they usually ask.</p></div>
+      <div class="glass rv d1"><em>2</em><h3>I train it on your business</h3><p>Your real services, prices, FAQs and tone, connected to your calendar, CRM or spreadsheet.</p></div>
+      <div class="glass rv d2"><em>3</em><h3>It starts answering</h3><p>On your WhatsApp, Instagram, website or phone line. You see every conversation and lead.</p></div>
+    </div>
+    <div class="chips rv"><span>⚡ Instant replies, 24/7</span><span>📅 Books into your calendar</span><span>🛒 Takes orders &amp; payments</span><span>📇 Captures every lead</span><span>🙋 Hands off to your team</span><span>🌍 Speaks your customers' language</span></div>
+    <div class="final rv">
+      <h2>Want this for <span class="bizName">your business</span>?</h2>
+      <p>Send me a quick WhatsApp. I'll show you exactly what your assistant would look like, usually within a day. No pressure, no jargon.</p>
+      <div class="cbs">
+        <a class="btn g lg wa-link" target="_blank" rel="noopener">💬 WhatsApp Simeon</a>
+        <a class="btn o lg mail-link">✉️ Send an email</a>
+      </div>
+      <div class="cinfo"><a class="wa-link" target="_blank" rel="noopener">📱 <span id="waDisp"></span></a><a class="mail-link">📧 <span id="mailDisp"></span></a></div>
+    </div>
+  </div>
+</section>
+
+<footer class="lp">© <span id="yr"></span> Simeon O. · AI Chat &amp; Voice Automation · This page is a demo. Details shown are sample data.</footer>
+
+<div id="wpanel"></div>
+<div class="fabs">
+  <a class="fab wa wa-link" target="_blank" rel="noopener" aria-label="Chat with Simeon on WhatsApp"><span class="tip">Chat with Simeon on WhatsApp</span><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm5.3 14.1c-.2.6-1.3 1.2-1.8 1.3-.5 0-1 .2-3.2-.7-2.7-1.1-4.4-3.8-4.5-4-.1-.2-1.1-1.4-1.1-2.7s.7-1.9.9-2.2c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.9 2c.1.2.1.4 0 .6l-.4.6-.4.4c-.1.1-.3.3-.1.6.2.3.8 1.3 1.6 2 1.1 1 2 1.3 2.3 1.4.3.1.5.1.6-.1l.9-1c.2-.3.4-.2.7-.1l1.9.9c.3.1.5.2.5.3.1.2.1.8-.1 1.4z"/></svg></a>
+  <div style="position:relative">
+    <div class="teaser" id="teaser" style="display:none" onclick="App.toggleWidget(true)"><button onclick="event.stopPropagation();this.parentNode.remove()">×</button>👋 I'm the <b>website version</b> of the assistant. Try me!</div>
+    <button class="fab cw" id="cwfab" onclick="App.toggleWidget()" aria-label="Open website chat"><span class="dot"></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.5 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.2A8.5 8.5 0 1 1 21 11.5z"/></svg></button>
+  </div>
+</div>
+
+<div class="modal" id="modal" onclick="if(event.target===this)App.closeFin()"><div class="fin" id="fin"></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ---------- settings ---------- */
+const CFG = {
+  wa: '2348110117004', waDisp: '+234 811 011 7004',
+  email: 'simeono.automation@gmail.com',
+  video: 'https://www.awesomescreenshot.com/video/45335669?key=9d543fdd8a3e1fa9420c5c6c7435e471',
+  /* Live voice calls through Vapi. Setup steps: vapi/ASSISTANT-SETUP.md.
+     Use the PUBLIC key only. While these are empty, the voice tab plays the simulated call + recording instead. */
+  vapi: { publicKey: 'cc509e86-ac02-47ba-a685-8f04abf0effa', assistantId: 'bbdb8bbd-0da2-4d92-b9d9-13548de564fb', maxCallsPerVisitor: 3, maxSeconds: 240,
+    // voice choice on the call screen (Vapi built-in voices, v2 engine). Default is f; a link can preselect with &v=m
+    voices: { f: {agent:'Ava', voiceId:'Emma', label:'👩 Lady voice'}, m: {agent:'Ethan', voiceId:'Elliot', label:'👨 Man voice'} } }
+};
+const vapiOn = () => !!(CFG.vapi.publicKey && CFG.vapi.assistantId);
+const QS = new URLSearchParams(location.search);
+// business the demo is "built for": ?b=Name on a personalised link, otherwise the default below
+const DEFAULT_BIZ = 'XLNTInnovators';
+const cleanName = s => String(s || '').replace(/\s+/g, ' ').trim().slice(0, 40);
+// Who the whole site is "built for": a personalised link (?b=Name&t=type) or what they told the intro screen.
+// Kept for this browser session only, so a refresh doesn't replay the intro.
+const PROF = (() => {
+  let s = {}; try { s = JSON.parse(sessionStorage.getItem('so_profile') || '{}'); } catch(e){}
+  const b = cleanName(QS.get('b'));
+  return { biz: b || cleanName(s.biz), ind: QS.get('t') || (b && b !== s.biz ? '' : s.ind) || '', seen: !!s.seen && (!b || b === s.biz) };
+})();
+function saveProf(){ try { sessionStorage.setItem('so_profile', JSON.stringify(PROF)); } catch(e){} }
+const bizName = () => PROF.biz || DEFAULT_BIZ;
+// typed business description -> one of the demo's business types
+function guessInd(t){
+  const m = [[/dent|clinic|doctor|medic|health|physio|chiro|pharm|hospital/i,'dental'],[/salon|spa|hair|beauty|nail|barber|lash|brow|makeup/i,'salon'],[/restaur|cafe|café|food|kitchen|bar|bakery|pizza|grill|catering|chop/i,'restaurant'],[/real|estate|propert|realt|homes|letting|rent/i,'realestate'],[/store|shop|ecom|boutique|retail|fashion|cloth/i,'store'],[/gym|fitness|yoga|pilates|crossfit|train|sport/i,'fitness']].find(([r]) => r.test(t || ''));
+  return m ? m[1] : 'services';
+}
+const CUR = QS.get('cur') || '$';
+
+/* ---------- helpers ---------- */
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const wait = ms => new Promise(r => setTimeout(r, ms));
+const money = n => n === 0 ? 'Free' : CUR + (Number.isInteger(n) ? n.toLocaleString() : n.toFixed(2));
+const now = () => new Date().toLocaleTimeString([], {hour:'numeric', minute:'2-digit'});
+const first = n => esc(String(n).trim().split(/\s+/)[0]);
+const initials = n => (String(n).trim().split(/\s+/).slice(0,2).map(w => w[0]).join('') || '?').toUpperCase();
+const rand = n => Math.floor(Math.random() * n);
+const ref = p => p + '-' + (1000 + rand(9000));
+const waLink = t => `https://wa.me/${CFG.wa}?text=${encodeURIComponent(t)}`;
+function toast(t){ const el = $('#toast'); el.textContent = t; el.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove('on'), 3200); }
+function brandColor(s){ const pal = ['#5b4bff','#0f766e','#c2410c','#be185d','#1d4ed8','#7c3aed','#047857','#b45309']; let h = 0; for (const c of s) h = (h * 31 + c.charCodeAt(0)) >>> 0; return pal[h % pal.length]; }
+
+const ICO = {
+  back: '<svg class="bk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>',
+  phone: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z"/></svg>',
+  video: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 7l-7 5 7 5z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>',
+  dots: '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="12" cy="19" r="1.8"/></svg>',
+  info: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm1 15h-2v-6h2zm0-8h-2V7h2z"/></svg>',
+  send: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3.4 20.4l17.4-7.5a1 1 0 0 0 0-1.8L3.4 3.6a1 1 0 0 0-1.4 1.2L4 11l9 1-9 1-2 6.2a1 1 0 0 0 1.4 1.2z"/></svg>',
+  ok: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 1l2.6 2 3.3-.2.9 3.2 2.8 1.8-1.2 3.1 1.2 3.1-2.8 1.8-.9 3.2-3.3-.2L12 23l-2.6-2-3.3.2-.9-3.2-2.8-1.8 1.2-3.1-1.2-3.1 2.8-1.8.9-3.2 3.3.2z"/><path d="M8 12l3 3 5-6" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  tick: '<svg class="tick" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 9.5l3 3 6.5-7.5M7.5 12.5l1 0 6.5-7.5"/></svg>',
+  x: '<svg class="x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>',
+  bubble: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.5 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.2A8.5 8.5 0 1 1 21 11.5z"/></svg>',
+  call: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 15.5c-1.2 0-2.5-.2-3.6-.6a1 1 0 0 0-1 .2l-2.2 2.2a15 15 0 0 1-6.6-6.6l2.2-2.2a1 1 0 0 0 .3-1A11.4 11.4 0 0 1 8.5 4a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1 17 17 0 0 0 17 17 1 1 0 0 0 1-1v-3.5a1 1 0 0 0-1-1z"/></svg>'
+};
+
+/* ---------- channels ---------- */
+const CH = {
+  wa:    {n:'WhatsApp',     c:'#25D366', d:'2B+ users'},
+  ig:    {n:'Instagram',    c:'#E1306C', d:'DMs & comments'},
+  fb:    {n:'Messenger',    c:'#0866FF', d:'Facebook page'},
+  tg:    {n:'Telegram',     c:'#229ED9', d:'Bots & channels'},
+  web:   {n:'Website chat', c:'#5b4bff', d:'Your own site'},
+  voice: {n:'Voice agent',  c:'#f59e0b', d:'Answers calls'}
+};
+
+/* ---------- business types ---------- */
+const IND = {
+  dental: {l:'🦷 Dental / Clinic', menu:['book','prices','hours','faq','human'], bookL:'📅 Book an appointment', who:'patients',
+    svcs:[['Check-up & clean',85,'45 min'],['Teeth whitening',299,'60 min'],['Filling (from)',120,'30 min'],['Emergency appointment',95,'30 min'],['Invisalign consultation',0,'30 min']],
+    times:['9:00 AM','10:30 AM','1:00 PM','3:30 PM','5:00 PM'],
+    hours:[['Mon – Fri','8am – 6pm'],['Saturday','9am – 2pm'],['Sunday','Closed']],
+    faqs:[['Are you taking new patients?',/new patient|accept|register/i,'Yes! 😊 We\'re welcoming new patients right now — you can book your first check-up right here in the chat.'],
+          ['Do you accept insurance?',/insur|cover|plan/i,'We accept most major insurance plans 🦷 Bring your card to your appointment and we\'ll handle the claim for you.'],
+          ['What if I have an emergency?',/emergenc|pain|hurt|broke|urgent/i,'Sorry to hear that 😟 We keep same-day emergency slots open every weekday. Tap “Book an appointment” and choose “Emergency appointment”.'],
+          ['Is teeth whitening safe?',/whiten|safe/i,'Yes — our whitening is done by a qualified dentist using enamel-safe gel. Most patients see results up to 8 shades lighter ✨']]},
+  salon: {l:'💇 Salon / Spa', menu:['book','prices','hours','faq','human'], bookL:'📅 Book an appointment', who:'clients',
+    svcs:[['Haircut & blow-dry',45,'45 min'],['Full colour',95,'2 hrs'],['Gel manicure',30,'45 min'],['Luxury pedicure',40,'50 min'],['60-min massage',75,'60 min']],
+    times:['10:00 AM','11:30 AM','1:00 PM','3:00 PM','5:30 PM'],
+    hours:[['Tue – Fri','9am – 7pm'],['Saturday','9am – 5pm'],['Sun – Mon','Closed']],
+    faqs:[['Do I need a patch test for colour?',/patch|allerg/i,'For new colour clients, yes — it\'s free and takes 5 minutes. Pop in any time at least 48 hours before your appointment 💛'],
+          ['What\'s your cancellation policy?',/cancel|resched/i,'You can cancel or reschedule free of charge up to 24 hours before your appointment — just message us here.'],
+          ['Do you sell gift cards?',/gift|voucher/i,'We do! 🎁 Gift cards are available from $25 and never expire. Our team can sort one for you today.'],
+          ['Is there parking?',/park/i,'Yes, there\'s free parking right outside the salon 🚗']]},
+  restaurant: {l:'🍽️ Restaurant / Café', menu:['book','order','prices','hours','faq','human'], bookL:'📅 Book a table', orderL:'🥡 Order food', pricesL:'📋 See the menu', who:'guests', party:true, fee:3.5,
+    items:[['Grilled chicken platter',18],['Classic beef burger',15],['Seafood linguine',22],['Garden Caesar salad',11],['Chocolate lava cake',8]],
+    times:['12:30 PM','1:30 PM','6:00 PM','7:30 PM','8:45 PM'],
+    hours:[['Mon – Thu','11am – 10pm'],['Fri – Sat','11am – 11pm'],['Sunday','12pm – 9pm']],
+    faqs:[['Do you have vegetarian options?',/vegan|vegetarian|plant|meat/i,'Yes! 🌱 About a third of our menu is vegetarian, and most dishes can be made vegan — just mention it when you order.'],
+          ['Do you deliver?',/deliver/i,'We do! 🚚 Delivery is available within 5 miles and usually takes 30–45 minutes. You can order right here in the chat.'],
+          ['Can I book a private event?',/event|party|birthday|private|wedding/i,'Absolutely 🎉 We host birthdays and company dinners for up to 40 guests. Tap “Talk to a person” and our events team will reach out.'],
+          ['Is there parking?',/park/i,'Yes — free customer parking right behind the building 🅿️']]},
+  realestate: {l:'🏡 Real estate', menu:['listings','book','faq','human'], bookL:'📅 Book a viewing / valuation', who:'buyers and sellers', noPrice:true,
+    svcs:[['Viewing: 3-bed family home',0],['Viewing: 2-bed city apartment',0],['Viewing: 4-bed house with garden',0],['Free home valuation',0]],
+    props:[['🏡','3-bed family home','Oak Avenue · 3 bd · 2 ba · garden',425000,'#fef3c7'],['🏙️','2-bed city apartment','City Centre · 2 bd · 1 ba · balcony',289000,'#dbeafe'],['🌳','4-bed house with garden','Maple Grove · 4 bd · 3 ba · garage',610000,'#dcfce7']],
+    times:['10:00 AM','12:00 PM','2:30 PM','4:00 PM','5:30 PM'],
+    hours:[['Mon – Fri','9am – 6pm'],['Saturday','10am – 4pm'],['Sunday','Viewings by appointment']],
+    faqs:[['What are your fees for selling?',/fee|commission|charge|cost/i,'Our selling fee is a simple percentage of the final sale price, with no upfront costs — you only pay when we sell 🤝 Book a free valuation and we\'ll give you an exact figure.'],
+          ['Do you help first-time buyers?',/first.?time|mortgage|deposit/i,'Absolutely! 🗝️ We\'ll walk you through every step and can introduce you to a trusted mortgage advisor.'],
+          ['Do you handle rentals too?',/rent|let|tenant|landlord/i,'Yes — we have rental properties and a full management service for landlords 🏘️'],
+          ['How long does a sale take?',/how long|take|weeks|months/i,'On average 8–12 weeks from accepting an offer to getting the keys 📆']]},
+  store: {l:'🛍️ Online store', menu:['order','track','faq','human'], orderL:'🛍️ Shop best sellers', who:'shoppers', fee:5,
+    items:[['Wireless earbuds',59],['Smart watch',129],['Fast-charge power bank',35],['Leather phone case',19]],
+    times:[], hours:[['Live chat (AI)','24/7'],['Human support','Mon – Fri, 9am – 6pm']],
+    faqs:[['How long does shipping take?',/ship|deliver|arriv/i,'Standard shipping takes 2–4 business days 📦 Express next-day delivery is available at checkout.'],
+          ['What\'s your returns policy?',/return|refund|exchange/i,'You can return anything within 30 days for a full refund — no questions asked. I can start a return for you right here 🙂'],
+          ['Which payment methods do you take?',/pay|card|paypal|apple/i,'We accept all major cards, Apple Pay, Google Pay and PayPal 💳'],
+          ['Do you ship internationally?',/international|abroad|country|worldwide/i,'Yes! 🌍 We ship to 40+ countries. Shipping costs are calculated at checkout.']]},
+  fitness: {l:'🏋️ Gym / Fitness', menu:['book','prices','hours','faq','human'], bookL:'🏋️ Book a free trial', who:'members',
+    svcs:[['Free trial class',0,'60 min'],['Personal training session',50,'60 min'],['Yoga flow class',15,'60 min'],['HIIT bootcamp',12,'45 min']],
+    extra:[['Monthly membership','49/mo']],
+    times:['6:30 AM','9:00 AM','12:15 PM','5:30 PM','7:00 PM'],
+    hours:[['Mon – Fri','6am – 10pm'],['Sat – Sun','8am – 6pm']],
+    faqs:[['Is there a joining fee?',/join|sign.?up fee|contract/i,'No joining fee and no long contracts 💪 Memberships are month-to-month and you can cancel any time.'],
+          ['Do you have showers & lockers?',/shower|locker|changing/i,'Yes — free lockers, showers and towels for all members 🚿'],
+          ['I\'m a beginner — is that ok?',/beginner|new to|never/i,'Totally! Most of our members started as beginners. Your free trial includes a quick intro with a coach 🙌'],
+          ['Is there parking?',/park/i,'Yes, free parking for members right outside 🚗']]},
+  services: {l:'💼 Other / Services', menu:['book','prices','hours','faq','human'], bookL:'📅 Book a consultation', who:'clients',
+    svcs:[['Free 15-min discovery call',0,'15 min'],['1-hour consultation',120,'60 min'],['Project quote & proposal',0,'30 min']],
+    times:['9:30 AM','11:00 AM','1:30 PM','3:00 PM','4:30 PM'],
+    hours:[['Mon – Fri','9am – 5:30pm'],['Saturday','By appointment'],['Sunday','Closed']],
+    faqs:[['How quickly can you start?',/start|soon|quick|available/i,'Most projects can start within a week 🚀 Book a free discovery call and we\'ll confirm a date.'],
+          ['Do you work with small businesses?',/small|startup|budget/i,'Yes — small businesses are most of our clients, and we have packages for every budget 🙂'],
+          ['Do you offer payment plans?',/payment plan|instal|deposit|pay/i,'We do. Larger projects can be split into monthly payments 💳'],
+          ['Where are you based?',/where|based|located|remote/i,'We work with clients locally and remotely — meetings can be in person or on video call 🌍']]}
+};
+const ORDER = ['dental','salon','restaurant','realestate','store','fitness','services'];
+
+/* profile shared by every chat on the page */
+const P = {biz:'', ind:'', chan:''};
+const ind = () => IND[P.ind] || IND.services;
+
+/* ---------- chat engine ---------- */
+class Chat {
+  constructor(root, o){
+    Object.assign(this, {root, o, skin:o.skin, q:Promise.resolve(), step:null, d:{}, cart:[], chipsEl:null, lastChips:null});
+    this.build();
+  }
+  head(){
+    const b = esc(P.biz || 'Your Business'), ini = esc(initials(P.biz || 'Your Business')), col = brandColor(P.biz || 'x');
+    switch (this.skin){
+      case 'concierge': return `<div class="hd"><div class="hav">SO</div><div class="hn"><b>Demo Guide</b><span class="hstat">online · replies instantly</span></div></div>`;
+      case 'wa': return `<div class="hd">${ICO.back}<div class="hav" style="background:${col}">${ini}</div><div class="hn"><b>${b} ${ICO.ok}</b><span class="hstat">online</span></div><div class="hic">${ICO.video}${ICO.phone}${ICO.dots}</div></div>`;
+      case 'ig': return `<div class="hd">${ICO.back}<div class="hav"><span>${ini}</span></div><div class="hn"><b>${b}</b><span class="hstat">Active now</span></div><div class="hic">${ICO.phone}${ICO.video}</div></div>`;
+      case 'fb': return `<div class="hd">${ICO.back}<div class="hav" style="background:${col}">${ini}</div><div class="hn"><b>${b}</b><span class="hstat">Typically replies instantly</span></div><div class="hic">${ICO.phone}${ICO.video}${ICO.info}</div></div>`;
+      case 'tg': return `<div class="hd">${ICO.back}<div class="hav" style="background:${col}">${ini}</div><div class="hn"><b>${b}</b><span class="hstat">bot</span></div><div class="hic">${ICO.dots}</div></div>`;
+      case 'web': return `<div class="hd"><div class="hav">${ini}</div><div class="hn"><b>${b}</b><span class="hstat">● We reply instantly</span></div>${this.o.close ? `<button onclick="App.toggleWidget(false)" aria-label="Close">${ICO.x}</button>` : ''}</div>`;
+    }
+  }
+  build(){
+    const ph = {wa:'Message', ig:'Message…', fb:'Aa', tg:'Message', web:'Type your message…', concierge:'Type your answer…'}[this.skin];
+    const send = this.skin === 'ig' ? 'Send' : ICO.send;
+    this.root.innerHTML = `<div class="ch ch-${this.skin}" style="--b:${brandColor(P.biz || 'x')}">${this.head()}<div class="msgs"></div><form class="comp"><input placeholder="${ph}" aria-label="Message" autocomplete="off"><button class="sd" type="submit" aria-label="Send">${send}</button></form>${this.skin === 'web' ? '<div class="pw">⚡ AI assistant · demo by Simeon O.</div>' : ''}</div>`;
+    this.m = this.root.querySelector('.msgs');
+    this.f = this.root.querySelector('.comp');
+    this.inp = this.f.querySelector('input');
+    this.ph0 = ph;
+    this.st = this.root.querySelector('.hstat');
+    this.st0 = this.st.textContent;
+    this.f.onsubmit = e => { e.preventDefault(); const t = this.inp.value.trim(); if (!t) return; this.inp.value = ''; this.typed(t); };
+    // channel-specific opening details
+    const day = '<div class="daypill">Today</div>';
+    if (this.skin === 'wa') this.m.innerHTML = day + `<div class="note">🔒 Messages are end-to-end encrypted. This business uses an AI assistant to reply instantly.</div>`;
+    if (this.skin === 'tg') this.m.innerHTML = day;
+    if (this.skin === 'ig') this.m.innerHTML = `<div class="igprof"><div class="hav"><span>${esc(initials(P.biz))}</span></div><b>${esc(P.biz)}</b><span>@${esc(P.biz.toLowerCase().replace(/[^a-z0-9]+/g,''))} · Instagram</span><span>Business account</span><a>View profile</a></div>`;
+    if (this.skin === 'fb') this.m.innerHTML = `<div class="igprof"><div class="hav" style="background:${brandColor(P.biz)}">${esc(initials(P.biz))}</div><b>${esc(P.biz)}</b><span>Typically replies instantly</span></div>`;
+  }
+  scroll(){ requestAnimationFrame(() => this.m.scrollTop = this.m.scrollHeight); }
+  add(who, html){
+    const el = document.createElement('div');
+    el.className = 'msg ' + who;
+    const meta = ['wa','tg'].includes(this.skin) ? `<span class="meta">${now()}${who === 'me' ? ICO.tick : ''}</span>` : '';
+    el.innerHTML = `<div class="bub">${html}${meta}</div>`;
+    this.m.appendChild(el);
+    if (who === 'me' && this.skin === 'wa') setTimeout(() => el.querySelector('.tick')?.classList.add('read'), 700);
+    this.scroll();
+    return el;
+  }
+  // queue a bot message, with typing indicator and optional buttons
+  say(html, opt = {}){
+    this.q = this.q.then(async () => {
+      if (this.dead) return;
+      const t = document.createElement('div');
+      t.className = 'msg bot typing';
+      t.innerHTML = '<div class="bub"><i></i><i></i><i></i></div>';
+      this.m.appendChild(t); this.scroll();
+      if (['wa','tg','concierge'].includes(this.skin)) this.st.textContent = 'typing…';
+      await wait(opt.fast ? 350 : 450 + Math.min(1300, html.replace(/<[^>]+>/g,'').length * 11));
+      t.remove(); this.st.textContent = this.st0;
+      if (this.dead) return;
+      this.add('bot', html);
+      if (opt.chips) this.chips(opt.chips);
+      if (opt.ph){ this.inp.placeholder = opt.ph; this.f.classList.remove('pulse'); void this.f.offsetWidth; this.f.classList.add('pulse'); if (!opt.nofocus && window.innerWidth > 700) this.inp.focus({preventScroll:true}); }
+      else this.inp.placeholder = this.ph0;
+      if (opt.then) opt.then();
+    });
+  }
+  chips(list){
+    this.clearChips();
+    const el = document.createElement('div');
+    el.className = 'chips ' + (['wa','tg'].includes(this.skin) ? 'att' : 'qr');
+    list.forEach(c => {
+      const b = document.createElement('button');
+      b.type = 'button'; b.textContent = c.l;
+      if (c.wide || c.l.length > 18) b.classList.add('wide');
+      b.onclick = () => { this.clearChips(); this.add('me', esc(c.l)); this.handle(c.v, c.l); };
+      el.appendChild(b);
+    });
+    this.m.appendChild(el); this.chipsEl = el; this.lastChips = list; this.scroll();
+  }
+  clearChips(){ this.chipsEl?.remove(); this.chipsEl = null; }
+  typed(t){
+    const tl = t.toLowerCase();
+    let hit = null;
+    if (this.chipsEl && this.lastChips){
+      hit = this.lastChips.find(c => c.l.toLowerCase().replace(/[^a-z0-9 ]/g,'').trim() === tl.replace(/[^a-z0-9 ]/g,'').trim())
+         || this.lastChips.find(c => tl.length > 2 && c.l.toLowerCase().includes(tl));
+    }
+    this.clearChips();
+    this.add('me', esc(t));
+    this.handle(hit ? hit.v : null, t);
+  }
+  log(icon, text){ this.o.log && this.o.log(icon, text); }
+  handle(v, t){ (this.o.mode === 'concierge' ? this.hConcierge : this.hBot).call(this, v, t); }
+
+  /* ===== demo guide (onboarding) ===== */
+  startConcierge(){
+    const pre = PROF.biz;
+    // personalised link, or they already told us: greet them as if this demo was built just for them
+    if (pre){
+      this.say(`Hi there 👋 I'm <b>Simeon's demo guide</b>. I've set this demo up specially for <b>${esc(pre)}</b>.`, {fast:true});
+      this.say(`In about 2 minutes you'll see how an AI assistant would look after <b>${esc(pre)}</b>'s customers — on WhatsApp, Instagram, Messenger, Telegram, your website, or even over the phone.`);
+      return this.setBiz(pre, true);
+    }
+    // cold visitor: one friendly question, then the whole site is personalised with the answer
+    this.say(`Hi there 👋 I'm <b>Simeon's demo guide</b>.`, {fast:true});
+    this.say(`In about 2 minutes you'll see how an AI assistant would chat with <b>your</b> customers — on WhatsApp, Instagram, Messenger, Telegram, your website, or even over the phone.`);
+    this.askBiz();
+  }
+  intro(){ PROF.biz ? this.setBiz(PROF.biz, true) : this.askBiz(); }
+  askBiz(){ this.step = 'biz'; this.say(`First — what's the name of your business?`, {ph:'Type your business name…'}); }
+  askInd(){
+    this.step = 'ind';
+    this.say(`What kind of business is it? I'll load the right setup 👇`, {chips: ORDER.map(k => ({l:IND[k].l, v:'i:' + k}))});
+  }
+  askChan(){
+    this.step = 'chan';
+    if (App.want && CH[App.want]){ // came from a "Try a live call" button: skip the channel question
+      const k = App.want; App.want = null;
+      return this.say(`Setting up <b>${esc(P.biz)}</b>'s assistant on ${CH[k].n}… ✨`, {fast:true, then: () => setTimeout(() => App.launch(k), 900)});
+    }
+    this.say(`Last question: where would you like to see <b>${esc(P.biz)}</b>'s assistant in action?`, {chips: Object.entries(CH).map(([k, c]) => ({l:c.n, v:'c:' + k}))});
+  }
+  setBiz(name, quiet){
+    P.biz = cleanName(name);
+    if (PROF.biz !== P.biz){ PROF.biz = P.biz; saveProf(); applyProfile(); } // personalise the rest of the site for this visit
+    if (!quiet) this.say(`Love it — <b>${esc(P.biz)}</b> 🙌`, {fast:true});
+    const t = PROF.ind; // already known (link or earlier answer): skip the business-type question
+    if (t && IND[t]){ P.ind = t; this.o.widget ? this.o.onReady() : this.askChan(); } else this.askInd();
+  }
+  hConcierge(v, t){
+    switch (this.step){
+      case 'pre': return v === 'y' ? this.setBiz(this.d.pre) : this.askBiz();
+      case 'biz':
+        if (!t || t.trim().length < 2) return this.say(`Could you type your business name? (Any name works for the demo 🙂)`, {ph:'Type your business name…'});
+        return this.setBiz(t);
+      case 'ind': {
+        let k = v?.startsWith('i:') ? v.slice(2) : null;
+        if (!k) k = guessInd(t);
+        P.ind = k; PROF.ind = k; saveProf();
+        this.say(`Perfect, I've loaded the <b>${IND[k].l.replace(/^\S+\s/, '')}</b> setup.`, {fast:true});
+        return this.o.widget ? this.o.onReady() : this.askChan();
+      }
+      case 'chan': {
+        let k = v?.startsWith('c:') ? v.slice(2) : Object.keys(CH).find(k => (t || '').toLowerCase().includes(CH[k].n.toLowerCase().split(' ')[0].toLowerCase()));
+        if (!k) return this.say(`Just tap one of the options below 👇`, {chips:this.lastChips});
+        this.say(`Setting up <b>${esc(P.biz)}</b>'s assistant on ${CH[k].n}… ✨`, {fast:true, then: () => setTimeout(() => App.launch(k), 900)});
+        return;
+      }
+    }
+  }
+
+  /* ===== the business's assistant ===== */
+  menu(){
+    const I = ind(), L = {book:I.bookL, order:I.orderL, prices:I.pricesL || '💰 Prices', hours:P.ind === 'store' ? '🕒 Support hours' : '🕒 Hours & location', faq:'❓ Common questions', human:'👤 Talk to a person', track:'📦 Track my order', listings:'🏡 See properties'};
+    return I.menu.map(k => ({l:L[k], v:'go:' + k}));
+  }
+  startBot(){
+    this.step = 'menu';
+    this.log('💬', `New ${CH[this.skin]?.n || 'website'} conversation started`);
+    const I = ind();
+    this.say(`Hi there 👋 Welcome to <b>${esc(P.biz)}</b>! I'm the virtual assistant — I can help you any time, day or night.`, {fast:true});
+    this.say(`What can I help you with today?`, {chips:this.menu()});
+  }
+  anything(){
+    this.step = 'menu';
+    this.say(`Is there anything else I can help you with?`, {chips:[...this.menu(), {l:'✅ No, that\'s all', v:'go:done'}]});
+  }
+  intent(t){
+    const I = ind();
+    for (const f of I.faqs) if (f[1].test(t)) return {faq:f};
+    const R = [
+      ['done', /^(no|nope|nah|that'?s (all|it)|done|bye|goodbye|i'?m (done|good)|finish|nothing)\b/i],
+      ['thanks', /thank|thx|cheers|appreciate/i],
+      ['human', /human|person|agent|staff|someone|real|speak|talk to|call me|manager/i],
+      ['track', /track|where('?s| is) my|order status|parcel|package/i],
+      ['book', /book|appoint|reserv|schedul|slot|viewing|valuation|trial|table|availab/i],
+      ['listings', /propert|listing|house|home|apartment|flat|for sale/i],
+      ['order', /order|buy|purchase|shop|cart|get (a|some)/i],
+      ['prices', /price|cost|how much|fee|rate|menu|charge|pricing/i],
+      ['hours', /hour|open|close|location|address|where are|directions|find you/i],
+      ['faq', /question|faq|info/i],
+      ['greet', /^(hi|hello|hey|hiya|yo|good (morning|afternoon|evening))\b/i]
+    ];
+    for (const [k, r] of R) if (r.test(t)) {
+      if (I.menu.includes(k) || ['done','thanks','greet','human','faq'].includes(k)) return {go:k};
+      if (k === 'listings' || k === 'order') return {go: I.menu.includes('order') ? 'order' : I.menu.includes('listings') ? 'listings' : 'prices'};
+      if (k === 'track' || k === 'hours' || k === 'prices') return {go: I.menu.includes(k) ? k : 'faq'};
+      return {go:'menu'};
+    }
+    return null;
+  }
+  days(){
+    const out = [], d = new Date(), closedSun = /closed/i.test(ind().hours.find(h => /sun/i.test(h[0]))?.[1] || '');
+    for (let i = 0; out.length < 5 && i < 10; i++){
+      const x = new Date(d); x.setDate(d.getDate() + i);
+      if (closedSun && x.getDay() === 0) continue;
+      out.push(i === 0 ? 'Today' : i === 1 ? 'Tomorrow' : x.toLocaleDateString('en-US', {weekday:'short', month:'short', day:'numeric'}));
+    }
+    return out;
+  }
+  hBot(v, t){
+    const I = ind(), s = this.step, freeText = ['name','phone','email','addr','track'].includes(s);
+    if (!v && !freeText){
+      const it = this.intent(t || '');
+      if (it?.faq){ this.say(it.faq[2]); return this.anything(); }
+      if (it?.go) v = 'go:' + it.go;
+    }
+    if (v && v.startsWith('go:')) return this.go(v.slice(3), t);
+    const again = () => this.say(`Just tap one of the options below 👇`, {fast:true, chips:this.lastChips});
+    switch (s){
+      case 'menu':
+        this.log('📝', `Unanswered question flagged for training: “${t.slice(0, 60)}”`);
+        this.say(`Good question! 🤔 In the live version I'm trained on ${esc(P.biz)}'s real information — prices, policies, FAQs — so I'd answer that straight away.`);
+        return this.say(`For this demo, here's what I can show you:`, {chips:[...this.menu(), {l:'✅ No, that\'s all', v:'go:done'}]});
+      case 'party':
+        if (!v && /\d+/.test(t)) v = 'p:' + t.match(/\d+/)[0];
+        if (!v) return again();
+        this.d.party = v.slice(2);
+        return this.askDay();
+      case 'svc':
+        if (!v) return again();
+        this.d.svc = I.svcs[+v.slice(2)][0];
+        return this.askDay();
+      case 'day':
+        if (!v) return again();
+        this.d.day = v.slice(2);
+        this.step = 'time';
+        return this.say(`Here's what's free ${this.d.day === 'Today' || this.d.day === 'Tomorrow' ? this.d.day.toLowerCase() : 'on ' + this.d.day} 👇`, {chips:I.times.map(x => ({l:x, v:'t:' + x}))});
+      case 'time':
+        if (!v) return again();
+        this.d.time = v.slice(2);
+        this.step = 'name';
+        return this.say(`Lovely — <b>${this.d.time}, ${this.d.day}</b> it is ✨ What name should I put the booking under?`, {ph:'Your full name'});
+      case 'name':
+        if (t.trim().length < 2) return this.say(`Sorry, I didn't catch that — what's your name?`, {ph:'Your full name'});
+        this.d.name = t.trim().slice(0, 40);
+        this.step = 'phone';
+        return this.say(`Thanks, ${first(this.d.name)}! And the best phone number to reach you on?`, {ph:'Phone number'});
+      case 'phone':
+        if ((t.match(/\d/g) || []).length < 7) return this.say(`Hmm, that doesn't look like a phone number — could you double-check it? 🙂`, {ph:'Phone number'});
+        this.d.phone = t.trim().slice(0, 24);
+        if (this.d.flow === 'human') return this.handoffDone();
+        if (this.d.flow === 'order'){ this.step = 'fulfil'; return this.say(`Would you like pickup or delivery?`, {chips:[{l:'🏃 Pickup', v:'f:Pickup'}, {l:`🚚 Delivery (+${money(I.fee)})`, v:'f:Delivery'}]}); }
+        this.step = 'email';
+        return this.say(`Last one — what email should I send the confirmation to?`, {ph:'Email address', chips:[{l:'Skip', v:'skip'}]});
+      case 'email':
+        if (v === 'skip' || /^skip$/i.test(t)) this.d.email = '';
+        else if (/\S+@\S+\.\S+/.test(t)) this.d.email = t.trim();
+        else return this.say(`That email doesn't look quite right — mind checking it? (Or tap Skip.)`, {ph:'Email address', chips:[{l:'Skip', v:'skip'}]});
+        return this.bookSummary();
+      case 'confirm':
+        if (v === 'yes' || /^(y|yes|yep|confirm|ok|sure)/i.test(t)) return this.bookDone();
+        if (v === 'edit' || /change|edit|no/i.test(t)) return this.go('book');
+        return again();
+      case 'faq': {
+        if (!v) return again();
+        const f = I.faqs[+v.slice(2)];
+        this.say(f[2]);
+        this.step = 'faq';
+        return this.say(`Anything else you'd like to know?`, {chips:[...I.faqs.filter(x => x !== f).map(x => ({l:x[0], v:'f:' + I.faqs.indexOf(x)})), {l:'⬅️ Main menu', v:'go:menu'}]});
+      }
+      case 'shop':
+        if (!v){ const i = I.items.findIndex(x => t.toLowerCase().includes(x[0].toLowerCase().split(' ').pop())); if (i < 0) return again(); v = 'i:' + i; }
+        if (v === 'checkout') return this.checkout();
+        if (v === 'more') return this.showItems(`What else can I add? 😋`);
+        { const it = I.items[+v.slice(2)]; this.cart.push(it);
+          const tot = this.cart.reduce((a, x) => a + x[1], 0);
+          this.log('🛒', `Added to cart: ${it[0]} (${money(it[1])})`);
+          return this.say(`Added <b>${esc(it[0])}</b> to your order 🛒<br><small>${this.cart.length} item${this.cart.length > 1 ? 's' : ''} · ${money(tot)}</small>`, {chips:[{l:'➕ Add something else', v:'more'}, {l:'🧾 Checkout', v:'checkout'}]}); }
+      case 'fulfil':
+        if (!v) v = /deliver/i.test(t) ? 'f:Delivery' : /pick|collect/i.test(t) ? 'f:Pickup' : null;
+        if (!v) return again();
+        this.d.method = v.slice(2);
+        if (this.d.method === 'Delivery'){ this.step = 'addr'; return this.say(`What's the delivery address?`, {ph:'Street, city'}); }
+        return this.orderSummary();
+      case 'addr':
+        if (t.trim().length < 4) return this.say(`Could you give me the full address?`, {ph:'Street, city'});
+        this.d.addr = t.trim().slice(0, 80);
+        return this.orderSummary();
+      case 'oconfirm':
+        if (v === 'yes' || /^(y|yes|confirm|ok|sure|pay)/i.test(t)) return this.orderDone();
+        if (v === 'edit' || /change|edit|no/i.test(t)){ this.cart = []; return this.go('order'); }
+        return again();
+      case 'track': {
+        const n = (t.match(/\d{3,}/) || [])[0];
+        if (!n) return this.say(`I need the order number — it's in your confirmation email (any number works for this demo, e.g. <b>10482</b>).`, {ph:'Order number'});
+        this.log('📦', `Order #${n} looked up automatically — no staff needed`);
+        const eta = new Date(Date.now() + 864e5).toLocaleDateString('en-US', {weekday:'long', month:'short', day:'numeric'});
+        this.say(`<div class="card"><div class="ct">📦 Order #${esc(n)}</div><b>🚚 Out for delivery</b><div class="prog"><i class="on"></i><i class="on"></i><i class="on"></i><i></i></div><div class="row"><span>Ordered</span><span>✓</span></div><div class="row"><span>Packed</span><span>✓</span></div><div class="row"><span>Shipped</span><span>✓</span></div><div class="row"><span>Estimated arrival</span><span>${eta}</span></div></div>`);
+        this.say(`I'll message you here the moment it's delivered 👍`);
+        return this.anything();
+      }
+      case 'listings':
+        if (v && v.startsWith('v:')){ this.d = {flow:'book', svc:I.svcs[+v.slice(2)][0]}; return this.askDay(); }
+        return again();
+      default:
+        return this.go('menu');
+    }
+  }
+  askDay(){
+    this.step = 'day';
+    const what = this.d.party ? `a table for <b>${this.d.party}</b>` : `<b>${esc(this.d.svc)}</b>`;
+    this.say(`Great choice — ${what}. Which day works best for you?`, {chips:this.days().map(x => ({l:x, v:'d:' + x}))});
+  }
+  showItems(msg){
+    const I = ind();
+    this.step = 'shop';
+    this.say(msg, {chips:[...I.items.map((x, i) => ({l:`${x[0]} · ${money(x[1])}`, v:'i:' + i})), ...(this.cart.length ? [{l:'🧾 Checkout', v:'checkout'}] : [])]});
+  }
+  checkout(){
+    if (!this.cart.length) return this.showItems(`Your basket is empty — what would you like? 🙂`);
+    this.d = {flow:'order'};
+    this.step = 'name';
+    this.say(`Great! Let's get your order sorted. What name should I put it under?`, {ph:'Your full name'});
+  }
+  go(k, t){
+    const I = ind();
+    switch (k){
+      case 'menu': this.step = 'menu'; return this.say(`Sure! Here's what I can help with:`, {chips:[...this.menu(), {l:'✅ No, that\'s all', v:'go:done'}]});
+      case 'greet': this.step = 'menu'; return this.say(`Hello! 👋 What can I help you with today?`, {chips:this.menu()});
+      case 'thanks': this.say(`You're very welcome! 😊`, {fast:true}); return this.anything();
+      case 'book':
+        this.d = {flow:'book'};
+        if (I.party){ this.step = 'party'; return this.say(`I'd love to get you a table! 🍽️ How many people?`, {chips:['1','2','3','4','5','6+'].map(x => ({l:x, v:'p:' + x}))}); }
+        this.step = 'svc';
+        return this.say(I.noPrice ? `Happy to set that up! What would you like to book?` : `Of course! Which service would you like?`, {chips:I.svcs.map((x, i) => ({l: I.noPrice ? x[0] : `${x[0]} · ${money(x[1])}`, v:'s:' + i}))});
+      case 'prices': {
+        const rows = (I.svcs || I.items).map(x => `<div class="row"><span>${esc(x[0])}${x[2] ? ` <small>· ${x[2]}</small>` : ''}</span><span>${money(x[1])}</span></div>`).join('') + (I.extra || []).map(x => `<div class="row"><span>${x[0]}</span><span>${CUR}${x[1]}</span></div>`).join('');
+        this.say(`<div class="card"><div class="ct">${I.items && !I.svcs ? '📋 Menu' : '💰 Prices'}</div>${rows}</div>`);
+        this.step = 'menu';
+        return this.say(I.party ? `Fancy ordering, or would you like to book a table?` : `Would you like me to book you in?`, {chips:[...(I.menu.includes('order') ? [{l:I.orderL, v:'go:order'}] : []), ...(I.menu.includes('book') ? [{l:I.bookL, v:'go:book'}] : []), {l:'⬅️ Main menu', v:'go:menu'}]});
+      }
+      case 'hours': {
+        const rows = I.hours.map(h => `<div class="row"><span>${h[0]}</span><span>${h[1]}</span></div>`).join('');
+        this.say(`<div class="card"><div class="ct">🕒 Opening hours</div>${rows}${P.ind === 'store' ? '' : `<div class="row"><span>📍 Address</span><span>Your address + Google Maps link</span></div>`}</div>`);
+        return this.anything();
+      }
+      case 'faq':
+        this.step = 'faq';
+        return this.say(`Here are the questions we get asked most 👇 (You can also just type your own.)`, {chips:I.faqs.map((x, i) => ({l:x[0], v:'f:' + i}))});
+      case 'human':
+        this.d = {flow:'human'};
+        this.step = 'name';
+        this.say(`Of course! I'll get someone from the ${esc(P.biz)} team to reach out to you personally 🙂`, {fast:true});
+        return this.say(`What's your name?`, {ph:'Your full name'});
+      case 'order':
+        this.cart = [];
+        return this.showItems(P.ind === 'restaurant' ? `Yum! Here's what's popular today 😋 Tap to add to your order:` : `Here are our best sellers right now 🔥 Tap to add to your basket:`);
+      case 'track':
+        this.step = 'track';
+        return this.say(`Sure! What's your order number? (Any number works for the demo — e.g. <b>10482</b>)`, {ph:'Order number'});
+      case 'listings': {
+        const cards = I.props.map(p => `<div class="prop"><i style="background:${p[4]}">${p[0]}</i><div><b>${p[1]}</b><span>${p[2]}</span><strong>${money(p[3])}</strong></div></div>`).join('');
+        this.say(`<div class="card"><div class="ct">🏡 Featured properties</div>${cards}</div>`);
+        this.step = 'listings';
+        return this.say(`Would you like to view one of these?`, {chips:[...I.props.map((p, i) => ({l:`📅 View the ${p[1].replace(/^\d-bed /, '')}`, v:'v:' + i})), {l:'⬅️ Main menu', v:'go:menu'}]});
+      }
+      case 'done':
+        this.step = 'end';
+        this.log('✅', 'Conversation closed — full transcript saved');
+        return this.say(`Thanks so much for chatting with <b>${esc(P.biz)}</b>! Have a lovely day 😊`, {then: () => this.o.onDone && setTimeout(this.o.onDone, 1500)});
+    }
+  }
+  bookSummary(){
+    const d = this.d;
+    this.step = 'confirm';
+    this.say(`<div class="card"><div class="ct">📋 Booking summary</div>${d.party ? `<div class="row"><span>Table for</span><span>${d.party}</span></div>` : `<div class="row"><span>Booking</span><span>${esc(d.svc)}</span></div>`}<div class="row"><span>Date</span><span>${d.day}</span></div><div class="row"><span>Time</span><span>${d.time}</span></div><div class="row"><span>Name</span><span>${esc(d.name)}</span></div><div class="row"><span>Phone</span><span>${esc(d.phone)}</span></div>${d.email ? `<div class="row"><span>Email</span><span>${esc(d.email)}</span></div>` : ''}</div>`);
+    this.say(`Shall I confirm this for you?`, {chips:[{l:'✅ Yes, confirm', v:'yes'}, {l:'✏️ Change something', v:'edit'}]});
+  }
+  bookDone(){
+    const d = this.d, r = ref('BK');
+    const what = d.party ? `Table for ${d.party}` : d.svc;
+    this.say(`<div class="card"><div class="ct">🎉 You're booked!</div><div class="row"><span>Reference</span><span>${r}</span></div><div class="row"><span>When</span><span>${d.day}, ${d.time}</span></div><span class="okb">CONFIRMED</span></div>`);
+    this.say(`${d.email ? `I've sent a confirmation to <b>${esc(d.email)}</b>` : `I've sent a confirmation by text`} and you'll get a reminder 24 hours before. See you soon, ${first(d.name)}! 👋`);
+    this.log('📅', `Added to calendar: ${what} — ${d.day}, ${d.time}`);
+    this.log('📇', `New lead saved to CRM: ${d.name}, ${d.phone}`);
+    this.log('🔔', `${P.biz} team notified on WhatsApp`);
+    this.log('⏰', 'Reminder scheduled for 24h before');
+    this.anything();
+  }
+  orderSummary(){
+    const I = ind(), d = this.d, sub = this.cart.reduce((a, x) => a + x[1], 0), fee = d.method === 'Delivery' ? I.fee : 0;
+    d.total = sub + fee;
+    this.step = 'oconfirm';
+    const lines = this.cart.map(x => `<div class="row"><span>${esc(x[0])}</span><span>${money(x[1])}</span></div>`).join('');
+    this.say(`<div class="card"><div class="ct">🧾 Your order</div>${lines}${fee ? `<div class="row"><span>Delivery</span><span>${money(fee)}</span></div>` : ''}<div class="row tot"><span>Total</span><span>${money(d.total)}</span></div><div class="row"><span>${d.method}</span><span>${d.addr ? esc(d.addr) : 'Ready in 20 min'}</span></div></div>`);
+    this.say(`Does everything look right, ${first(d.name)}?`, {chips:[{l:'💳 Confirm & pay', v:'yes'}, {l:'✏️ Start over', v:'edit'}]});
+  }
+  orderDone(){
+    const d = this.d, r = ref('#A');
+    this.say(`<div class="card"><div class="ct">🎉 Order ${r} placed!</div>Tap below to pay securely. ${d.method === 'Delivery' ? 'Your order will be with you in about 40 minutes.' : 'We\'ll have it ready in 20 minutes.'}<a class="paybtn" onclick="toast('Demo — in the live version this opens a secure Stripe / Paystack checkout.')">Pay ${money(d.total)} securely</a></div>`);
+    this.log('🧾', `New order ${r} — ${money(d.total)} (${d.method})`);
+    this.log('💳', 'Secure payment link sent to customer');
+    this.log('📇', `Customer saved to CRM: ${d.name}, ${d.phone}`);
+    this.log('🔔', P.ind === 'restaurant' ? 'Kitchen notified with the order' : 'Warehouse notified to pack the order');
+    this.cart = [];
+    this.anything();
+  }
+  handoffDone(){
+    const d = this.d;
+    this.say(`Thanks, ${first(d.name)} 🙏 I've passed your details to the team — someone will get back to you shortly (usually within 15 minutes during opening hours).`);
+    this.log('🚨', `Handoff alert: ${d.name} (${d.phone}) wants to talk — sent to staff with the full chat`);
+    this.anything();
+  }
+}
+
+/* ---------- voice: live call through Vapi (falls back to the simulation) ---------- */
+function renderCall(root){ return vapiOn() ? Live.ready(root) : renderSimCall(root); }
+
+const Live = {
+  sdk: null, call: null,
+  callsUsed(){ try { return +localStorage.getItem('so_vapi_calls') || 0; } catch(e){ return 0; } },
+  callsLeft(){ return Math.max(0, CFG.vapi.maxCallsPerVisitor - this.callsUsed()); },
+  countCall(){ try { localStorage.setItem('so_vapi_calls', this.callsUsed() + 1); } catch(e){} },
+  plain: s => String(s).replace(/\p{Extended_Pictographic}|️/gu, '').replace(/\$/g, CUR).replace(/\s+/g, ' ').trim(),
+  // business details sent into the assistant prompt ({{...}} values in vapi/ASSISTANT-SETUP.md)
+  vars(){
+    const I = ind(), pr = p => p === 0 ? 'free' : CUR + p;
+    const list = [
+      ...(I.svcs || []).map(([n, p, d]) => I.noPrice ? n : `${n}, ${pr(p)}${d ? ', ' + d : ''}`),
+      ...(I.items || []).map(([n, p]) => `${n}, ${pr(p)}`),
+      ...(I.extra || []).map(([n, p]) => `${n}, ${CUR}${p}`),
+      ...(I.props || []).map(([, n, d, p]) => `For sale: ${n} (${d.replace(/·/g, ',')}), ${CUR}${p.toLocaleString()}`)
+    ];
+    return {
+      business_name: P.biz, agent_name: this.voiceCfg().agent,
+      business_type: I.l.replace(/^\S+\s/, '').toLowerCase(), customers: I.who,
+      services: list.join('; ') + (I.fee ? `; delivery fee ${CUR}${I.fee}` : ''),
+      hours: I.hours.map(([d, h]) => `${d}: ${h}`).join('; '),
+      faqs: I.faqs.map(([q, , a]) => `Q: ${this.plain(q)} A: ${this.plain(a)}`).join(' '),
+      times: I.times.length ? I.times.join(', ') : 'no appointments, this is an online store',
+      currency_word: ({'$':'dollars','£':'pounds','€':'euros','₦':'naira','₹':'rupees'})[CUR] || 'dollars'
+    };
+  },
+  ui(){ return {box:$('#ctx'), tm:$('#ctimer'), wave:$('#wave'), btns:$('#cbtns')}; },
+  voice: CFG.vapi.voices[QS.get('v')] ? QS.get('v') : 'f',
+  voiceCfg(){ return CFG.vapi.voices[this.voice]; },
+  pickVoice(k){ this.voice = k; document.querySelectorAll('.vpick button').forEach(b => b.classList.toggle('on', b.dataset.v === k)); },
+  // per-call settings sent with the call: chosen voice + faster, more accurate speech-to-text
+  overrides(){
+    const I = ind(), V = this.voiceCfg();
+    // words the transcriber should expect: the business name and its service names (helps with names like "Glow Studio")
+    const terms = [P.biz, ...[...(I.svcs || []), ...(I.items || []), ...(I.props || []).map(p => [p[1]])].map(s => this.plain(s[0]).replace(/^Viewing: /, '').replace(/\(.*?\)/g, '').trim())]
+      .filter(Boolean).slice(0, 12);
+    return {
+      variableValues: this.vars(),
+      maxDurationSeconds: CFG.vapi.maxSeconds,
+      voice: {provider:'vapi', voiceId:V.voiceId, version:'2'},
+      transcriber: {provider:'deepgram', model:'nova-3', language:'en', smartFormat:true, numerals:true, keyterm:terms},
+      // reply as soon as the caller has clearly finished, without cutting them off mid-sentence
+      startSpeakingPlan: {waitSeconds:0.3, smartEndpointingEnabled:'livekit'}
+    };
+  },
+  ready(root){
+    const left = this.callsLeft(), I = ind();
+    root.innerHTML = `<div class="call"><div class="cav">${esc(initials(P.biz))}</div><h3>${esc(P.biz)}</h3><div class="csub">AI receptionist · <span id="ctimer">Live · ready</span></div><div class="wave" id="wave">${'<i></i>'.repeat(14)}</div><div class="ctx" id="ctx"></div><div class="cbtns" id="cbtns"></div></div>`;
+    const { box, btns } = this.ui();
+    if (!left){
+      box.innerHTML = `<div class="tip">You've used your live test calls on this device 🙌<br>Watch the simulated call, or message Simeon to hear one set up for <b>${esc(P.biz)}</b>.</div>`;
+      btns.innerHTML = `<button onclick="App.simCall()" style="background:#fff;color:#1d1856">▶ Watch the simulated call</button>`;
+      return this.cta(true);
+    }
+    box.innerHTML = `<div class="tip"><b>This is a real, live call.</b> First, ${esc(P.biz)}'s AI receptionist asks one quick question about your business, so it sounds like you. Then pretend you're one of your ${esc(I.who)}. Try:<ul>${(I.party ? ['“Can I book a table for four tomorrow night?”'] : P.ind === 'store' ? ['“Where\'s my order?”'] : [`“I'd like to book ${esc(this.plain((I.svcs || [['an appointment']])[0][0]).replace(/^Viewing: /, 'a viewing of the ').toLowerCase().replace(/^(?!a |an )/, 'a '))}”`]).concat(`“${esc(this.plain(I.faqs[0][0]))}”`).map(x => `<li>${x}</li>`).join('')}</ul></div>`;
+    this.loadSdk().catch(() => {}); // warm up the SDK so tapping "Start" connects faster
+    // pre-load the audio engine the SDK fetches during the call, so it isn't downloaded inside Vapi's 15s window
+    fetch('https://c.daily.co/call-machine/versioned/0.94.0/static/call-machine-object-bundle.js', {mode:'no-cors'}).catch(() => {});
+    this.warm();
+    btns.innerHTML = `<div class="vpick">${Object.entries(CFG.vapi.voices).map(([k, x]) => `<button data-v="${k}" class="${k === this.voice ? 'on' : ''}" onclick="Live.pickVoice('${k}')">${x.label}<small>${x.agent}</small></button>`).join('')}</div><button class="go" id="goBtn" onclick="Live.start()">${ICO.call} Start live call</button><a href="#" class="ghost" onclick="App.simCall();return false">or watch a simulated call instead</a>`;
+  },
+  async loadSdk(){
+    if (this.sdk) return this.sdk;
+    // 3.x: 2.x ships daily-js 0.87.0, which Daily no longer supports (browser never sends audio, Vapi hangs up)
+    const m = await import('https://cdn.jsdelivr.net/npm/@vapi-ai/web@3.0.1/+esm');
+    const Vapi = m.default?.default || m.default;
+    const v = this.sdk = new Vapi(CFG.vapi.publicKey);
+    v.on('call-start', () => this.onStart());
+    v.on('call-end', () => this.onEnd());
+    v.on('speech-start', () => this.ui().wave?.classList.add('on'));
+    v.on('speech-end', () => this.ui().wave?.classList.remove('on'));
+    v.on('message', m => this.onMsg(m));
+    v.on('error', e => this.onError(e));
+    // show each connection step so the ~10s join doesn't look frozen
+    v.on('call-start-progress', e => {
+      const run = this.call; if (run && e.status !== 'started' && /creation|join/.test(e.stage)) run.tl.push(`${e.stage.replace('daily-call-', '').replace('web-call-', '')} ${e.status} ${((performance.now() - run.t0) / 1000).toFixed(1)}s`);
+      const tm = this.ui().tm; if (!tm || !run || run.started || e.status !== 'started') return;
+      const step = {'web-call-creation':'Dialling…', 'daily-call-join':'Connecting audio…', 'audio-processing-setup':'Ringing…'}[e.stage];
+      if (step) tm.textContent = step;
+    });
+    return v;
+  },
+  // Vapi hangs up if the browser's audio isn't connected within ~15s of the call being created, and from
+  // some networks setup takes 14-16s. Open the connections to Vapi and Daily ahead of time so DNS/TLS
+  // setup happens before the clock starts. (Requests are no-cors pings; the responses don't matter.)
+  warm(){
+    const now = Date.now(); if (this.warmedAt && now - this.warmedAt < 20000) return; this.warmedAt = now;
+    // only URLs that answer 200, so prospects' consoles stay clean; gs.daily.co (no 200 URL) is warmed by a preconnect hint
+    ['https://api.vapi.ai/health', 'https://c.daily.co/call-machine/versioned/0.94.0/static/call-machine-object-bundle.js'].forEach(u => fetch(u, {mode:'no-cors'}).catch(() => {}));
+    const l = document.createElement('link'); l.rel = 'preconnect'; l.href = 'https://gs.daily.co'; l.crossOrigin = ''; document.head.appendChild(l);
+  },
+  async start(retry){
+    const go = $('#goBtn'); if (go){ go.disabled = true; go.innerHTML = 'Connecting…'; }
+    $('#ctimer').textContent = retry ? 'Reconnecting…' : 'Connecting…';
+    this.warm();
+    // Ask for the mic first so a "blocked" answer gets a clear message. Keep it open until the call connects:
+    // releasing it makes some headsets (Bluetooth especially) take seconds to wake up again.
+    if (!retry || !this.mic){
+      this.releaseMic();
+      try { this.mic = await navigator.mediaDevices.getUserMedia({audio:true}); }
+      catch(e){ return this.fail('🎙️ Your microphone is blocked, so the live call can\'t start. Allow microphone access (padlock icon in the address bar) and try again, or watch the simulated call.'); }
+    }
+    const prevTl = retry ? (this.lastRun?.tl || []).concat('— retry —') : [];
+    const run = this.call = {on:true, s:0, said:'', bubbles:{}, last:null, t0:performance.now(), tl:prevTl, retried:!!retry};
+    this.lastRun = run;
+    try {
+      const v = await this.loadSdk();
+      if (this.call !== run) return;
+      const c = await v.start(CFG.vapi.assistantId, this.overrides());
+      if (!c && this.call === run && !run.started) throw new Error('no call');
+    } catch(e){
+      if (this.call === run) this.fail('Live calls are busy right now 😅 Here\'s the simulated call instead.', true);
+    }
+  },
+  onStart(){
+    const run = this.call; if (!run) return;
+    run.started = true; this.countCall(); // only connected calls use up the visitor's allowance
+    setTimeout(() => this.releaseMic(), 3000); // the call has its own mic track by now
+    const { box, tm, btns } = this.ui();
+    box.innerHTML = '<div class="sys">Live call · transcript appears as you talk</div>';
+    tm.textContent = '0:00';
+    run.iv = setInterval(() => { run.s++; const t = this.ui().tm; if (t) t.textContent = `${Math.floor(run.s / 60)}:${String(run.s % 60).padStart(2, '0')}`; }, 1000);
+    btns.innerHTML = `<div class="row"><button class="mute" id="muteBtn" onclick="Live.mute()">🎙️ Mute</button><button onclick="Live.stop()">${ICO.call} End call</button></div>`;
+    App.log('📞', 'Live call answered by the AI voice agent');
+  },
+  onMsg(m){
+    const run = this.call; if (!run || m.type !== 'transcript' || !m.transcript) return;
+    const box = this.ui().box; if (!box) return;
+    const who = m.role === 'assistant' ? 'a' : 'c';
+    let b = run.last && run.last.who === who ? run.last : null;
+    if (!b){
+      const el = document.createElement('div'); el.className = who;
+      el.innerHTML = `<b>${who === 'a' ? 'AI agent' : 'You'}</b><span></span>`;
+      box.appendChild(el);
+      b = run.last = {who, el, done:''};
+    }
+    if (m.transcriptType === 'final'){
+      b.done = (b.done + ' ' + m.transcript).trim();
+      b.el.querySelector('span').textContent = b.done;
+      if (who === 'c') run.said += ' ' + m.transcript;
+    } else b.el.querySelector('span').textContent = (b.done + ' ' + m.transcript).trim();
+    box.scrollTop = box.scrollHeight;
+  },
+  mute(){
+    if (!this.sdk) return;
+    const m = !this.sdk.isMuted(); this.sdk.setMuted(m);
+    const b = $('#muteBtn'); if (b){ b.classList.toggle('on', m); b.textContent = m ? '🔇 Unmute' : '🎙️ Mute'; }
+  },
+  releaseMic(){ this.mic?.getTracks().forEach(t => t.stop()); this.mic = null; },
+  stop(){ if (this.sdk && this.call) this.sdk.stop(); else this.onEnd(); },
+  // leaving the voice tab: hang up quietly
+  hangup(){ this.releaseMic(); const r = this.call; this.call = null; if (r){ clearInterval(r.iv); try { this.sdk?.stop(); } catch(e){} } },
+  onEnd(){
+    const run = this.call; if (!run) return;
+    this.releaseMic();
+    if (!run.started){ run.tl.push('hung up before connecting'); return this.dropped(run); }
+    this.call = null; clearInterval(run.iv);
+    const { box, tm, wave, btns } = this.ui();
+    if (!box) return;
+    wave?.classList.remove('on'); tm.textContent = 'Call ended';
+    box.insertAdjacentHTML('beforeend', '<div class="sys">— Call ended —</div>'); box.scrollTop = box.scrollHeight;
+    if (run.started){
+      if (/\d{3}|book|appointment|table|order|viewing|trial/i.test(run.said)) App.log('📅', 'Booking / request saved from the call');
+      if (/\d{3}/.test(run.said)) App.log('📇', 'Caller saved as a new lead with their number');
+      App.log('📝', 'Call summary + transcript sent to the owner');
+    }
+    btns.innerHTML = '';
+    this.cta();
+  },
+  onError(e){
+    console.warn('Vapi error', e);
+    const run = this.call; if (!run) return;
+    if (run.started) return this.onEnd();
+    const err = e?.error?.errorMsg || e?.error?.message?.msg || e?.error?.message || e?.type || 'unknown';
+    run.tl.push('error: ' + (typeof err === 'string' ? err : JSON.stringify(err)).slice(0, 80));
+    const dropped = /ended|eject/i.test(JSON.stringify(e || ''));
+    if (dropped) return this.dropped(run);
+    this.fail('Live calls are busy right now 😅 Here\'s the simulated call instead.', true);
+  },
+  // Vapi hung up before the audio connected (its ~15s window ran out). Redial once straight away:
+  // the second attempt is faster because connections and the mic are already warm. A dropped call costs nothing.
+  dropped(run){
+    if (this.call !== run) return; // error and call-end can both fire for the same drop
+    this.call = null;
+    if (run.retried) return this.fail(this.DROPPED);
+    const tm = this.ui().tm; if (tm) tm.textContent = 'Reconnecting…';
+    try { this.sdk?.stop(); } catch(e){}
+    setTimeout(() => { if ($('#ctimer')?.textContent === 'Reconnecting…') this.start(true); }, 700);
+  },
+  DROPPED: '📶 The line couldn\'t connect in time, even after a retry. This usually comes down to a slow connection. Please try again in a moment, or watch the simulated call.',
+  fail(msg, autoSim){
+    this.call = null; this.releaseMic();
+    const { box, tm, btns } = this.ui(); if (!box) return;
+    tm.textContent = 'Not connected';
+    const tl = this.lastRun?.tl || [];
+    box.innerHTML = `<div class="err">${msg}${tl.length ? `<small style="display:block;margin-top:8px;opacity:.65;font-size:11px">Details: ${esc(tl.join(' · '))}</small>` : ''}</div>`;
+    console.info('Live call timeline:', tl.join(' | '));
+    btns.innerHTML = `<button onclick="App.simCall()" style="background:#fff;color:#1d1856">▶ Watch the simulated call</button><a href="#" class="ghost" onclick="App.launch('voice');return false">Try the live call again</a>`;
+    if (autoSim) setTimeout(() => { if ($('#ctx .err')) App.simCall(); }, 3500);
+  },
+  cta(quiet){
+    const root = $('.call'); if (!root || root.querySelector('.lcta')) return;
+    root.classList.add('ended');
+    const left = this.callsLeft();
+    root.insertAdjacentHTML('beforeend', `<div class="lcta"><b>Want this answering ${esc(P.biz)}'s phone?</b><span>Trained on your real services, prices and calendar. Live in a few days.</span><a href="${waLink(`Hi Simeon, I just tried the live AI voice call for ${P.biz} on your demo. I'd like one for my business.`)}" target="_blank" rel="noopener">💬 WhatsApp Simeon</a><div class="lk">${!quiet && left ? `<button onclick="App.launch('voice')">↺ Call again (${left} left)</button>` : ''}<button onclick="App.finale()">See what else it can do</button></div></div>`);
+  }
+};
+
+/* ---------- voice call simulation ---------- */
+function renderSimCall(root){
+  const I = ind(), svc = I.svcs ? I.svcs[0][0].replace(/^Viewing: /, 'a viewing of the ') : 'a table for two', t = I.times.length ? I.times : ['10:00 AM','2:30 PM'];
+  const ask = I.party ? 'book a table for two tomorrow' : P.ind === 'store' ? 'check on my order' : `book ${/^a /.test(svc) ? svc : svc.toLowerCase()} for tomorrow`;
+  root.innerHTML = `<div class="call"><div class="cav">${esc(initials(P.biz))}</div><h3>${esc(P.biz)}</h3><div class="csub">AI receptionist · <span id="ctimer">Calling…</span></div><div class="wave" id="wave">${'<i></i>'.repeat(14)}</div><div class="ctx" id="ctx"></div><div class="cbtns">${vapiOn() ? (Live.callsLeft() ? `<a href="#" onclick="App.launch('voice');return false">📞 Talk to it live instead</a>` : '') : `<a href="${CFG.video}" target="_blank" rel="noopener">▶ Hear the real voice agent (recorded call)</a>`}<button onclick="App.endCall()">${ICO.call} End call</button></div></div>`;
+  const lines = P.ind === 'store' ? [
+    ['a', `Hi, thanks for calling ${P.biz}! This is Ava, the virtual assistant. How can I help?`],
+    ['c', `Hi, I'd like to ${ask}.`],
+    ['a', `Of course. Could you give me your order number?`],
+    ['c', `It's 10482.`],
+    ['a', `Thanks! Order 10482 shipped yesterday and arrives tomorrow. I'll text you the tracking link now.`],
+    ['c', `Perfect, thank you!`],
+    ['a', `You're welcome — have a great day!`]
+  ] : [
+    ['a', `Hi, thanks for calling ${P.biz}! This is Ava, the virtual assistant. How can I help?`],
+    ['c', `Hi, I'd like to ${ask}.`],
+    ['a', `Of course! Tomorrow I have ${t[1]} or ${t[3] || t[0]}. Which works better?`],
+    ['c', `${t[3] || t[0]} please.`],
+    ['a', `Great. Can I take your name and number?`],
+    ['c', `Sure — it's Jordan, 555 0142.`],
+    ['a', `Thanks, Jordan. You're booked for ${t[3] || t[0]} tomorrow. I'm texting you a confirmation now. Anything else?`],
+    ['c', `No, that's all. Thanks!`],
+    ['a', `My pleasure — see you tomorrow!`]
+  ];
+  const box = root.querySelector('#ctx'), tm = root.querySelector('#ctimer'), wave = root.querySelector('#wave');
+  const run = App.callRun = {on:true};
+  App.log('📞', `Incoming call answered by the AI voice agent`);
+  (async () => {
+    await wait(1800); if (!run.on) return;
+    let s = 0; wave.classList.add('on');
+    run.iv = setInterval(() => { s++; tm.textContent = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; }, 1000);
+    box.innerHTML = '<div class="sys">Simulated transcript · live call is voice</div>';
+    for (const [w, x] of lines){
+      if (!run.on) return;
+      const el = document.createElement('div'); el.className = w;
+      el.innerHTML = `<b>${w === 'a' ? 'AI agent' : 'Caller'}</b>${esc(x)}`;
+      box.appendChild(el); box.scrollTop = box.scrollHeight;
+      await wait(1100 + x.length * 32);
+    }
+    if (!run.on) return;
+    App.endCall(true);
+  })();
+}
+
+/* ---------- page controller ---------- */
+const App = {
+  main: null, widget: null,
+  log(icon, text){
+    const box = $('#log'); box.querySelector('.empty')?.remove();
+    const el = document.createElement('div'); el.className = 'lg';
+    el.innerHTML = `<em>${icon}</em><div>${esc(text)}<small>${now()} · automatic</small></div>`;
+    box.appendChild(el); box.scrollTop = box.scrollHeight;
+  },
+  clearLog(){ $('#log').innerHTML = '<div class="lg empty">Waiting for the customer…</div>'; },
+  setSkin(skin){
+    const dev = $('#device');
+    dev.classList.toggle('web', skin === 'web');
+    $('#sbar').className = 'sbar ' + skin;
+    $('#burl').textContent = (P.biz || 'yourbusiness').toLowerCase().replace(/[^a-z0-9]+/g, '') + '.com';
+    $('#fsite').innerHTML = skin === 'web' ? `<div class="fn">${esc(P.biz)}<span>Home · Services · About · Contact</span></div><h4>Welcome to ${esc(P.biz)}</h4><div class="sk" style="width:80%"></div><div class="sk" style="width:65%"></div><div class="sk" style="width:72%"></div><div class="fb" style="background:${brandColor(P.biz)}"></div><div class="tiles"><div></div><div></div><div></div></div>` : '';
+  },
+  start(){
+    document.body.classList.add('demo');
+    scrollTo({top:0});
+    this.stopCall();
+    P.chan = '';
+    this.setSkin('concierge');
+    $('#tools').classList.remove('on'); $('#hint').classList.remove('on'); $('#side').classList.remove('on');
+    $('#sTitle').textContent = 'Let\'s set up your demo';
+    $('#sSub').textContent = 'Answer a couple of quick questions and your assistant will be ready.';
+    if (this.main) this.main.dead = true;
+    this.main = new Chat($('#croot'), {skin:'concierge', mode:'concierge'});
+    this.main.startConcierge();
+  },
+  restart(){ P.biz = ''; P.ind = ''; this.start(); },
+  home(){ document.body.classList.remove('demo'); scrollTo({top:0}); },
+  launch(k){
+    if (!P.biz){ return this.start(); }
+    P.chan = k;
+    this.stopCall();
+    if (this.main) this.main.dead = true;
+    this.setSkin(k);
+    $('#tools').classList.add('on'); $('#side').classList.add('on');
+    this.clearLog();
+    $('#tabs').innerHTML = Object.entries(CH).map(([c, x]) => `<button class="tab${c === k ? ' on' : ''}" onclick="App.launch('${c}')"><i style="background:${x.c}"></i>${x.n}</button>`).join('');
+    $('#sTitle').innerHTML = `${esc(P.biz)} on ${CH[k].n}`;
+    const live = k === 'voice' && vapiOn();
+    $('#sSub').textContent = k !== 'voice' ? 'This is exactly what your customers would see.' : live ? 'Call the AI receptionist yourself — out loud, right from this page.' : 'A customer is calling — listen in on how the AI handles it.';
+    const sample = ind().faqs[0][0];
+    $('#hint').innerHTML = k !== 'voice'
+      ? `👉 <b>You're the customer now.</b> Tap the buttons or type anything — try “${esc(sample.toLowerCase().replace(/\?$/, ''))}?”`
+      : live ? `📞 <b>You're the caller now.</b> Tap <b>“Start live call”</b>, allow your microphone and talk to it like a customer would. Calls are up to ${Math.round(CFG.vapi.maxSeconds / 60)} minutes.`
+      : `📞 This is a <b>simulated</b> call so you can follow along. Tap <b>“Hear the real voice agent”</b> to listen to a real recorded call.`;
+    $('#hint').classList.add('on');
+    const top = $('#demo').getBoundingClientRect().top; if (top < -40 || top > 200) scrollTo({top: scrollY + top - 70});
+    if (k === 'voice'){ this.main = null; return renderCall($('#croot')); }
+    this.main = new Chat($('#croot'), {skin:k, mode:'bot', log:(i, t) => this.log(i, t), onDone:() => this.finale()});
+    this.main.startBot();
+  },
+  simCall(){ this.stopCall(); this.clearLog(); $('#hint').innerHTML = '📞 This is a <b>simulated</b> call so you can follow along.'; renderSimCall($('#croot')); },
+  voiceDemo(){
+    if (P.biz && P.ind){ document.body.classList.add('demo'); scrollTo({top:0}); return this.launch('voice'); }
+    this.want = 'voice'; this.start();
+  },
+  stopCall(){ Live.hangup(); if (this.callRun){ this.callRun.on = false; clearInterval(this.callRun.iv); this.callRun = null; } },
+  endCall(natural){
+    const r = this.callRun; if (!r) return;
+    this.stopCall();
+    document.querySelector('#wave')?.classList.remove('on');
+    const tm = document.querySelector('#ctimer'); if (tm) tm.textContent = 'Call ended';
+    const box = document.querySelector('#ctx');
+    if (box){ box.insertAdjacentHTML('beforeend', '<div class="sys">— Call ended —</div>'); box.scrollTop = box.scrollHeight; }
+    if (natural){
+      this.log('📅', 'Booking added to calendar from the phone call');
+      this.log('💬', 'Confirmation text sent to the caller');
+      this.log('📝', 'Call summary + recording emailed to the owner');
+    }
+  },
+  toggleWidget(force){
+    const p = $('#wpanel'), open = force ?? !p.classList.contains('on');
+    $('#teaser')?.remove();
+    document.querySelector('#cwfab .dot')?.remove();
+    p.classList.toggle('on', open);
+    if (!open) return;
+    // the widget is the visitor's own website assistant: use the business they told the intro
+    if (!P.biz && PROF.biz) P.biz = PROF.biz;
+    if (!P.ind && PROF.ind && IND[PROF.ind]) P.ind = PROF.ind;
+    if (!this.widget || this.widget.forBiz !== P.biz){
+      const w = this.widget = new Chat(p, {skin:'web', mode:'bot', close:true, log:(i, t) => this.log(i, t), onDone:() => this.finale()});
+      w.forBiz = P.biz;
+      if (P.biz && P.ind) w.startBot();
+      else {
+        // no business yet: run the short setup inside the widget, then hand over
+        w.o.mode = 'concierge'; w.o.widget = true;
+        w.o.onReady = () => {
+          w.o.mode = 'bot'; w.forBiz = P.biz;
+          w.root.querySelector('.hd').outerHTML = w.head();
+          w.root.querySelector('.ch').style.setProperty('--b', brandColor(P.biz));
+          w.st = w.root.querySelector('.hstat'); w.st0 = w.st.textContent;
+          w.say(`All set! From here on I'm <b>${esc(P.biz)}</b>'s website assistant — imagine you're a customer on your site 👇`, {fast:true});
+          w.startBot();
+        };
+        w.say(`Hi 👋 I'm the <b>website chat</b> version of the assistant — this is how it would sit on your own site.`, {fast:true});
+        w.intro();
+      }
+    }
+    if (innerWidth > 700) setTimeout(() => this.widget.inp.focus(), 300);
+  },
+  finale(){
+    const b = esc(P.biz || 'your business'), I = ind();
+    $('#fin').innerHTML = `<button class="xx" onclick="App.closeFin()" aria-label="Close">×</button>
+      <div class="conf">🎉</div>
+      <h2>That's the demo${P.biz ? ', ' + b : ''}!</h2>
+      <p>You've just seen how an AI assistant can look after ${b}'s ${I.who} — answering, booking, selling and handing over to your team — automatically, around the clock, on the apps they already use.</p>
+      <div class="ben">
+        <div><em>⚡</em><span><b>Never miss a customer</b>Replies in seconds, even at 2am and on holidays.</span></div>
+        <div><em>📅</em><span><b>Fills your calendar</b>Bookings and reminders happen on their own.</span></div>
+        <div><em>📇</em><span><b>Every lead captured</b>Names and numbers go straight into your CRM.</span></div>
+        <div><em>⏳</em><span><b>Hours back every week</b>Your team only steps in when it really matters.</span></div>
+      </div>
+      <div class="more"><h4>This was a quick demo — the version I'd build for ${b} can also:</h4>
+      <div class="tags"><span>Learn your real prices &amp; FAQs</span><span>Sync with Google Calendar / Calendly</span><span>Send leads to your CRM or Sheets</span><span>Take payments</span><span>Speak your customers' language</span><span>Follow up automatically</span><span>Answer Instagram comments</span><span>Weekly reports</span></div></div>
+      ${vapiOn()
+        ? `<div class="vcard"><div><b>📞 Prefer phone calls?</b><span>I also build AI voice agents that answer your business line — call ${b}'s AI receptionist live, right now.</span></div><a href="#" onclick="App.closeFin();App.launch('voice');return false">📞 Try a live call</a></div>`
+        : `<div class="vcard"><div><b>📞 Prefer phone calls?</b><span>I also build AI voice agents that answer your business line — listen to a real recorded call.</span></div><a href="${CFG.video}" target="_blank" rel="noopener">▶ Watch voice demo</a></div>`}
+      <p style="margin-bottom:16px"><b style="color:var(--ink)">Let's talk about ${b}.</b> I'm Simeon — message me and I'll show you exactly what your assistant would look like.</p>
+      <div class="cbs">
+        <a class="btn g" href="${waLink(`Hi Simeon, I just tried your chatbot demo${P.biz ? ' for ' + P.biz : ''} and I'd like to know more.`)}" target="_blank" rel="noopener">💬 WhatsApp me</a>
+        <a class="btn o" href="mailto:${CFG.email}?subject=${encodeURIComponent('Chatbot for ' + (P.biz || 'my business'))}">✉️ ${CFG.email}</a>
+        <button class="btn o" onclick="App.closeFin()">↺ Try another channel</button>
+      </div>`;
+    $('#modal').classList.add('on');
+  },
+  closeFin(){
+    $('#modal').classList.remove('on');
+  }
+};
+
+
+/* ---------- static bits ---------- */
+(function init(){
+  const msg = 'Hi Simeon, I saw your chatbot demo and I\'d like to know more.';
+  document.querySelectorAll('.wa-link').forEach(a => a.href = waLink(msg));
+  $('#navwa').href = waLink(msg);
+  document.querySelectorAll('.mail-link').forEach(a => a.href = `mailto:${CFG.email}?subject=${encodeURIComponent('Chatbot for my business')}`);
+  $('#waDisp').textContent = CFG.waDisp; $('#mailDisp').textContent = CFG.email;
+  if (vapiOn()){
+    for (const a of [$('#vbtn'), $('#vplay')]){ a.removeAttribute('target'); a.href = '#'; a.onclick = e => { e.preventDefault(); App.voiceDemo(); }; }
+    $('#vbtn').textContent = '📞 Talk to it live — free test call';
+    $('#vplay b').textContent = 'Live voice agent';
+    $('#vplay span').textContent = 'Real AI call in your browser · no phone needed';
+    const hv = $('#heroVoice'); hv.innerHTML = '📞 Talk to it live'; hv.onclick = e => { e.preventDefault(); App.voiceDemo(); };
+  } else $('#vbtn').href = $('#vplay').href = CFG.video;
+  $('#yr').textContent = new Date().getFullYear();
+  const svgs = {
+    wa:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm5.3 14.1c-.2.6-1.3 1.2-1.8 1.3-.5 0-1 .2-3.2-.7-2.7-1.1-4.4-3.8-4.5-4-.1-.2-1.1-1.4-1.1-2.7s.7-1.9.9-2.2c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.9 2c.1.2.1.4 0 .6l-.4.6-.4.4c-.1.1-.3.3-.1.6.2.3.8 1.3 1.6 2 1.1 1 2 1.3 2.3 1.4.3.1.5.1.6-.1l.9-1c.2-.3.4-.2.7-.1l1.9.9c.3.1.5.2.5.3.1.2.1.8-.1 1.4z"/></svg>',
+    ig:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor"/></svg>',
+    fb:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.4 2 2 6.1 2 11.6c0 2.9 1.2 5.4 3.1 7.1V22l2.9-1.6c1.2.3 2.6.5 4 .5 5.6 0 10-4.1 10-9.6S17.6 2 12 2zm1 12.9l-2.5-2.7-5 2.7 5.5-5.8 2.6 2.7 4.9-2.7z"/></svg>',
+    tg:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M21.9 4.3l-3.2 15.1c-.2 1-.9 1.3-1.7.8l-4.9-3.6-2.3 2.3c-.3.3-.5.5-1 .5l.3-5 9.1-8.2c.4-.4-.1-.6-.6-.2L6.4 13 1.6 11.5c-1-.3-1-1 .2-1.5L20.6 2.8c.9-.3 1.6.2 1.3 1.5z"/></svg>',
+    web:ICO.bubble, voice:ICO.call
+  };
+  // tapping a channel goes straight to that channel once the business type is picked
+  $('#chgrid').innerHTML = Object.entries(CH).map(([k, c]) => `<div class="chc" onclick="App.want='${k}';App.start()"><i style="background:${k === 'ig' ? 'linear-gradient(45deg,#feda75,#fa7e1e,#d62976,#962fbf,#4f5bd5)' : c.c}">${svgs[k]}</i><b>${c.n}</b><span>${c.d}</span></div>`).join('');
+  const tick = () => { const el = $('#clock'); if (el) el.textContent = new Date().toLocaleTimeString([], {hour:'numeric', minute:'2-digit'}).replace(/\s?[AP]M/i, ''); };
+  tick(); setInterval(tick, 30000);
+  applyProfile();
+  landingFx();
+  showTeaserSoon();
+})();
+
+/* ---------- personalise the whole page for the business they gave us ---------- */
+function applyProfile(){
+  const n = bizName(), b = esc(n);
+  $('#p3biz').textContent = n; $('#p3av').textContent = initials(n);
+  const t = $('#teaser'); if (t) t.innerHTML = `<button onclick="event.stopPropagation();this.parentNode.remove()">×</button>` + (PROF.biz ? `👋 I'm <b>${b}</b>'s website assistant. Ask me anything!` : `👋 I'm the <b>website version</b> of the assistant. Try me!`);
+  if (!PROF.biz) return; // skipped the intro: keep the generic copy
+  $('#hTitle').innerHTML = `${b}'s next customer is messaging <span class="serif grad">right now.</span>`;
+  $('#hEyebrow').textContent = `Live demo · built for ${n}`;
+  document.querySelectorAll('.bizName').forEach(el => el.textContent = el.closest('#problem') ? n + "'s" : n);
+  document.title = `${n} · AI receptionist demo`;
+}
+// the website-chat teaser pops up a few seconds after they reach the page
+function showTeaserSoon(){ setTimeout(() => { const t = $('#teaser'); if (t && !$('#wpanel').classList.contains('on') && !document.body.classList.contains('demo')) t.style.display = 'block'; }, 6000); }
+
+/* ---------- landing motion: reveal on scroll, progress rail, 3D tilt ---------- */
+function landingFx(){
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  // step links bring the funnel back if the demo is open
+  document.querySelectorAll('#nlinks a, #rail a').forEach(a => a.addEventListener('click', () => { if (document.body.classList.contains('demo')) App.home(); }));
+  const els = document.querySelectorAll('.rv');
+  if (!('IntersectionObserver' in window)) return els.forEach(e => e.classList.add('in'));
+  const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target); } }), {threshold:.12, rootMargin:'0px 0px -40px 0px'});
+  els.forEach(e => io.observe(e));
+  // progress rail + nav pills follow the step in view
+  const steps = ['top', 'problem', 'try', 'voice', 'contact'].map(id => document.getElementById(id));
+  const mark = id => {
+    document.querySelectorAll('#rail a').forEach(a => a.classList.toggle('on', a.dataset.s === id));
+    document.querySelectorAll('#nlinks a').forEach(a => a.classList.toggle('on', a.getAttribute('href') === '#' + id));
+  };
+  const so = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) mark(e.target.id); }), {rootMargin:'-45% 0px -50% 0px'});
+  steps.forEach(s => s && so.observe(s));
+  mark('top');
+  if (reduce || matchMedia('(hover: none)').matches) return;
+  // hero scene follows the mouse a little
+  const hero = $('#top'), s3d = $('#s3d');
+  hero.addEventListener('mousemove', e => {
+    const r = hero.getBoundingClientRect(), x = (e.clientX - r.left) / r.width - .5, y = (e.clientY - r.top) / r.height - .5;
+    s3d.style.setProperty('--ry', (x * 14).toFixed(2) + 'deg'); s3d.style.setProperty('--rx', (-y * 10).toFixed(2) + 'deg');
+  });
+  hero.addEventListener('mouseleave', () => { s3d.style.setProperty('--ry', '0deg'); s3d.style.setProperty('--rx', '0deg'); });
+  // cards tilt toward the cursor
+  document.querySelectorAll('.tilt').forEach(c => {
+    c.addEventListener('mousemove', e => { const r = c.getBoundingClientRect(), x = (e.clientX - r.left) / r.width - .5, y = (e.clientY - r.top) / r.height - .5; c.style.transform = `perspective(900px) rotateY(${x * 8}deg) rotateX(${-y * 8}deg) translateY(-4px)`; });
+    c.addEventListener('mouseleave', () => c.style.transform = '');
+  });
+}
+</script>
+<!-- Embedded in the portfolio (?embed=1): skip the landing page, open straight on the demo -->
+<style>
+html.embed nav,html.embed .fabs,html.embed .rail,html.embed footer{display:none!important}
+html.embed #demo{padding-top:18px}
+</style>
+<script>
+if (QS.has('embed')) {
+  document.documentElement.classList.add('embed');
+  App.home = () => App.restart();
+  if (QS.get('mode') === 'voice') App.voiceDemo(); else App.start();
+  // Esc inside the demo closes the portfolio's demo window
+  addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#modal').classList.contains('on') && parent !== window) parent.postMessage('demo:close', location.origin); });
+}
+</script>
+</body>
+</html>

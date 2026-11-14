@@ -1,0 +1,46 @@
+# Simeon Onabowale
+
+> Simeon Onabowale is an AI automation engineer based in Lagos, Nigeria. He builds n8n, Make.com and Zapier workflows, Claude-powered AI agents and chatbots, and GoHighLevel systems for teams in the US, UK and EU. Website: https://simeononabowale.netlify.app/
+
+## Who he is
+
+- Name: Simeon Onabowale
+- Role: AI automation engineer (freelance)
+- Location: Lagos, Nigeria. Works remotely with US, UK and EU teams.
+- Tools: n8n (cloud and self-hosted), Make.com, Zapier, Claude and Claude Code, GoHighLevel, OpenAI, Vapi and Retell AI voice, WhatsApp Business API, Twilio, Google Workspace, HubSpot, Airtable, Stripe.
+- Typical clients: law offices, real estate teams, clinics and medical centres, coaches and consultants.
+- Upwork: identity-verified freelancer, https://www.upwork.com/freelancers/~012e9a6098279f78fc
+
+## Services
+
+- Document and data pipelines: PDFs, contracts and forms read by AI, checked in code, and turned into filled templates, sheets or CRM records.
+- n8n workflow builds: from a single integration to multi-branch systems with retries, error workflows and alerts.
+- AI agents and assistants: WhatsApp, website and voice assistants that answer, qualify and book, with a human hand-off.
+- GoHighLevel systems: pipelines, fields, tags, workflows, forms, contracts and email templates, set up and documented.
+- Lead generation engines: research, qualification and personalised first lines at volume.
+- Rescues and audits: automations that fail silently or were left behind by another developer, diagnosed, fixed and documented.
+
+## Selected work (client names are kept private)
+
+- Closing documents for a real-estate law office: a 200-page title binder PDF goes into a folder and a 14-page, signing-ready closing packet comes out (5 documents plus 2 state forms, 82 editable form fields). Built with n8n and Claude.
+- Matter tracker for the same office: staff drop any PDF in one folder, Claude files it to the right sale, and an 8:00 am email digest lists what is missing on every file.
+- AI receptionists for clinics and local businesses: WhatsApp, website and voice assistants set up from one config.
+- Tax-preparer onboarding in GoHighLevel: agreement, e-signature, tagging and welcome email with every step tracked.
+- Lead engine: researches 1,000+ UK businesses in one run and writes a pitch for each. Built with Claude Code.
+- Closing Desk: an in-house web app designed to replace a per-seat case-management tool.
+- "Keys to Close": a phased GoHighLevel system for a new realtor.
+
+## How he works
+
+- Maps the process before building, and says plainly where automation pays and where it does not.
+- AI reads and sorts; amounts, dates and legal fields are validated in code before anything is written.
+- Every workflow has retries, duplicate guards and an alert path.
+- Everything runs on the client's own accounts and ships with a written handover guide, a test log and a walkthrough.
+- A single workflow, fix or chatbot usually takes 3 to 10 days. A full pipeline takes 2 to 4 weeks.
+- Projects start with a free 30-minute process audit and a written scope.
+
+## Contact
+
+- WhatsApp: +234 811 011 7004 (https://wa.me/2348110117004)
+- Email: simeono.automation@gmail.com
+- Upwork: https://www.upwork.com/freelancers/~012e9a6098279f78fc

@@ -1,0 +1,893 @@
+{
+  "name": "WhatsApp chatbot · Clinic bookings",
+  "nodes": [
+    {
+      "id": "5h0wca5e-0011-4000-8000-000000000002",
+      "name": "WhatsApp message in",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "demo-wa-chat",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "webhookId": "5h0wca5e-0011-4000-8000-000000000001"
+    },
+    {
+      "id": "5h0wca5e-0011-4000-8000-000000000003",
+      "name": "Tidy the message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const b = $input.first().json.body || {};\n  const text = String(b.text || '').trim().slice(0, 1000), session = String(b.session || 'anon').replace(/[^a-zA-Z0-9-]/g, '').slice(0, 40) || 'anon';\n  if (!text) throw new Error('Empty message');\n  return [{ json: { text, session, phone: String(b.from || '+1 503 555 0190'), channel: 'WhatsApp', business: 'Brightside Clinic', time: new Date().toISOString().slice(0, 19).replace('T', ' ') } }];"
+      }
+    },
+    {
+      "id": "5h0wca5e-0011-4000-8000-000000000004",
+      "name": "Load what the bot knows",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        440,
+        0
+      ],
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "RUN-SETUP-FIRST"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Bot Knowledge"
+        },
+        "options": {}
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000,
+      "executeOnce": true,
+      "alwaysOutputData": true
+    },
+    {
+      "id": "5h0wca5e-0011-4000-8000-000000000005",
+      "name": "Load the conversation",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        660,
+        0
+      ],
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "RUN-SETUP-FIRST"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Chat Log"
+        },
+        "options": {}
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000,
+      "executeOnce": true,
+      "alwaysOutputData": true
+    },
+    {
+      "id": "5h0wca5e-0011-4000-8000-000000000006",
+      "name": "Load bookings",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        880,
+        0
+      ],
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "RUN-SETUP-FIRST"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Bookings"
+        },
+        "options": {}
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000,
+      "executeOnce": true,
+      "alwaysOutputData": true
+    },
+    {
+      "id": "5h0wca5e-0011-4000-8000-000000000007",
+      "name": "Work out open slots",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// The calendar is worked out in code, so the bot can only ever offer a slot that is really free.\n  const taken = new Set($('Load bookings').all().map(i => i.json).filter(b => b.Day).map(b => b.Day + ' ' + b.Time));\n  const open = [], d = new Date();\n  while (open.length < 8) {\n    d.setDate(d.getDate() + 1); if (!(d.getDay() % 6)) continue;\n    const day = d.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });\n    for (const t of ['9:00 am', '10:30 am', '2:00 pm', '3:30 pm']) if (!taken.has(day + ' ' + t) && open.length < 8) open.push(day + ' ' + t);\n  }\n  return [{ json: { ...$('Tidy the message').first().json, open } }];"
+      }
+    },
+    {
+      "id": "5h0wca5e-0011-4000-8000-000000000008",
+      "name": "Build Claude request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1320,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const m = $json;\n  const facts = $('Load what the bot knows').all().map(i => i.json).filter(r => r.Business === m.business).map(r => `- ${r.Topic}: ${r.Answer}`).join('\\n');\n  const history = $('Load the conversation').all().map(i => i.json).filter(r => r.Session === m.session).slice(-14).map(r => ({ role: r.Who === 'Visitor' ? 'user' : 'assistant', content: String(r.Message) }));\n  const system = `You are the WhatsApp assistant for Brightside Family Clinic. Write like a friendly front desk: short messages (under 50 words), plain words, no emojis.\nAnswer ONLY from these notes:\n${facts}\n\nBOOKING. Free slots right now (offer two or three at a time, never any other time):\n${m.open.map(s => '- ' + s).join('\\n')}\nTo book you need: the patient's name, the appointment type (New patient visit, Check-up or Follow-up) and one of the free slots above. Ask for what is missing, one question at a time.\nNEVER ask why they want to be seen and never give medical advice. If they describe symptoms or anything urgent, give the urgent-problems note. If they ask for a person, hand off.\nReply with ONLY a JSON object:\n{\"reply\": \"your WhatsApp message\", \"action\": \"none\" | \"book\" | \"handoff\", \"booking\": {\"name\": \"\", \"type\": \"\", \"slot\": \"copied exactly from the list\"} or null}\nUse \"book\" only in the message where you confirm the booking.`;\n  return [{ json: { ...m, body: { model: 'claude-sonnet-5-5', max_tokens: 500, system, messages: [...history, { role: 'user', content: m.text }] } } }];"
+      }
+    },
+    {
+      "id": "5h0wca5e-0011-4000-8000-000000000009",
+      "name": "Claude: write the reply",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1540,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "options": {
+          "timeout": 120000
+        },
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "anthropicApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.body) }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            }
+          ]
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000
+    },
+    {
+      "id": "5h0wca5e-0011-4000-8000-000000000010",
+      "name": "Check the booking",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1760,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const raw = ($json.content || []).filter(c => c.type === 'text').map(c => c.text).join('');\nlet ai = null;\nfor (let i = raw.indexOf('{'); i >= 0 && !ai; i = raw.indexOf('{', i + 1)) {\n  let depth = 0, inStr = false, esc = false;\n  for (let k = i; k < raw.length; k++) {\n    const ch = raw[k];\n    if (inStr) { if (esc) esc = false; else if (ch === '\\\\') esc = true; else if (ch === '\"') inStr = false; }\n    else if (ch === '\"') inStr = true;\n    else if (ch === '{') depth++;\n    else if (ch === '}' && --depth === 0) { try { ai = JSON.parse(raw.slice(i, k + 1)); } catch (e) {} break; }\n  }\n}\nif (!ai) throw new Error('Claude did not return JSON: ' + raw.slice(0, 200));\n  const m = $('Build Claude request').first().json;\n  let reply = String(ai.reply || '').trim().slice(0, 700) || 'Sorry, I did not catch that. Could you say it another way?';\n  let action = ['book', 'handoff'].includes(ai.action) ? ai.action : 'none', booking = null;\n  if (action === 'book') {\n    const b = ai.booking || {}, types = ['New patient visit', 'Check-up', 'Follow-up'];\n    if (b.name && types.includes(b.type) && m.open.includes(b.slot)) {\n      const cut = b.slot.lastIndexOf(' ', b.slot.lastIndexOf(' ') - 1);\n      booking = { name: String(b.name).slice(0, 80), type: b.type, day: b.slot.slice(0, cut), time: b.slot.slice(cut + 1) };\n    } else { action = 'none'; reply = 'Sorry, that time is not available. I can offer ' + m.open.slice(0, 3).join(', ') + '. Which would you like?'; }\n  }\n  return [{ json: { session: m.session, channel: m.channel, phone: m.phone, time: m.time, text: m.text, reply, action, booking } }];"
+      }
+    },
+    {
+      "id": "5h0wca5e-0011-4000-8000-000000000011",
+      "name": "Send the reply back",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1980,
+        0
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ reply: $json.reply, action: $json.action }) }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "5h0wca5e-0011-4000-8000-000000000012",
+      "name": "Two log lines",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2200,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const j = $('Check the booking').first().json;\n  return [{ json: { time: j.time, channel: j.channel, session: j.session, who: 'Visitor', message: j.text } }, { json: { time: j.time, channel: j.channel, session: j.session, who: 'Assistant', message: j.reply } }];"
+      }
+    },
+    {
+      "id": "5h0wca5e-0011-4000-8000-000000000013",
+      "name": "Save to the chat log",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        2420,
+        0
+      ],
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "RUN-SETUP-FIRST"
+        },
+        "operation": "append",
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Chat Log"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Time": "={{ $json.time }}",
+            "Channel": "={{ $json.channel }}",
+            "Session": "={{ $json.session }}",
+            "Who": "={{ $json.who }}",
+            "Message": "={{ $json.message }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Time",
+              "displayName": "Time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Channel",
+              "displayName": "Channel",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Session",
+              "displayName": "Session",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Who",
+              "displayName": "Who",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Message",
+              "displayName": "Message",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ]
+        },
+        "options": {
+          "cellFormat": "RAW"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000
+    },
+    {
+      "id": "5h0wca5e-0011-4000-8000-000000000016",
+      "name": "What happened?",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [
+        2640,
+        0
+      ],
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose"
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "id": "5h0wca5e-0011-4000-8000-000000000014",
+                    "leftValue": "={{ $('Check the booking').first().json.action }}",
+                    "rightValue": "book",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "Booked"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose"
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "id": "5h0wca5e-0011-4000-8000-000000000015",
+                    "leftValue": "={{ $('Check the booking').first().json.action }}",
+                    "rightValue": "handoff",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "Wants a person"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "executeOnce": true
+    },
+    {
+      "id": "5h0wca5e-0011-4000-8000-000000000017",
+      "name": "Add to the calendar",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        2860,
+        -100
+      ],
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "RUN-SETUP-FIRST"
+        },
+        "operation": "append",
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Bookings"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Booked at": "={{ $('Check the booking').first().json.time }}",
+            "Name": "={{ $('Check the booking').first().json.booking.name }}",
+            "Phone": "={{ $('Check the booking').first().json.phone }}",
+            "Service": "={{ $('Check the booking').first().json.booking.type }}",
+            "Day": "={{ $('Check the booking').first().json.booking.day }}",
+            "Time": "={{ $('Check the booking').first().json.booking.time }}",
+            "Status": "Booked by WhatsApp assistant"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Booked at",
+              "displayName": "Booked at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Phone",
+              "displayName": "Phone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Service",
+              "displayName": "Service",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Day",
+              "displayName": "Day",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Time",
+              "displayName": "Time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ]
+        },
+        "options": {
+          "cellFormat": "RAW"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000
+    },
+    {
+      "id": "5h0wca5e-0011-4000-8000-000000000018",
+      "name": "Tell the front desk",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        3080,
+        -100
+      ],
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "RUN-SETUP-FIRST"
+        },
+        "operation": "append",
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Outbox"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Time": "={{ $now.toFormat('yyyy-LL-dd HH:mm:ss') }}",
+            "Workflow": "WhatsApp chatbot",
+            "Ref": "",
+            "Channel": "Email",
+            "To": "Front desk",
+            "Message": "={{ 'New booking by WhatsApp: ' + $('Check the booking').first().json.booking.name + ', ' + $('Check the booking').first().json.booking.type + ', ' + $('Check the booking').first().json.booking.day + ' at ' + $('Check the booking').first().json.booking.time + '.' }}",
+            "Status": "Queued (demo outbox)"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Time",
+              "displayName": "Time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Workflow",
+              "displayName": "Workflow",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Channel",
+              "displayName": "Channel",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "To",
+              "displayName": "To",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Message",
+              "displayName": "Message",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Ref",
+              "displayName": "Ref",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ]
+        },
+        "options": {
+          "cellFormat": "RAW"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000
+    },
+    {
+      "id": "5h0wca5e-0011-4000-8000-000000000019",
+      "name": "Hand over to a person",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        2860,
+        120
+      ],
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "RUN-SETUP-FIRST"
+        },
+        "operation": "append",
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Outbox"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Time": "={{ $now.toFormat('yyyy-LL-dd HH:mm:ss') }}",
+            "Workflow": "WhatsApp chatbot",
+            "Ref": "",
+            "Channel": "Front desk alert",
+            "To": "Front desk",
+            "Message": "={{ 'A patient on WhatsApp (' + $('Check the booking').first().json.phone + ') asked for a person. Last message: ' + $('Check the booking').first().json.text }}",
+            "Status": "Queued (demo outbox)"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Time",
+              "displayName": "Time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Workflow",
+              "displayName": "Workflow",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Channel",
+              "displayName": "Channel",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "To",
+              "displayName": "To",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Message",
+              "displayName": "Message",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Ref",
+              "displayName": "Ref",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ]
+        },
+        "options": {
+          "cellFormat": "RAW"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000
+    }
+  ],
+  "connections": {
+    "WhatsApp message in": {
+      "main": [
+        [
+          {
+            "node": "Tidy the message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tidy the message": {
+      "main": [
+        [
+          {
+            "node": "Load what the bot knows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load what the bot knows": {
+      "main": [
+        [
+          {
+            "node": "Load the conversation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load the conversation": {
+      "main": [
+        [
+          {
+            "node": "Load bookings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load bookings": {
+      "main": [
+        [
+          {
+            "node": "Work out open slots",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Work out open slots": {
+      "main": [
+        [
+          {
+            "node": "Build Claude request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Claude request": {
+      "main": [
+        [
+          {
+            "node": "Claude: write the reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude: write the reply": {
+      "main": [
+        [
+          {
+            "node": "Check the booking",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check the booking": {
+      "main": [
+        [
+          {
+            "node": "Send the reply back",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send the reply back": {
+      "main": [
+        [
+          {
+            "node": "Two log lines",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Two log lines": {
+      "main": [
+        [
+          {
+            "node": "Save to the chat log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save to the chat log": {
+      "main": [
+        [
+          {
+            "node": "What happened?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "What happened?": {
+      "main": [
+        [
+          {
+            "node": "Add to the calendar",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Hand over to a person",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Add to the calendar": {
+      "main": [
+        [
+          {
+            "node": "Tell the front desk",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveManualExecutions": true
+  }
+}

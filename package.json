@@ -1,0 +1,7 @@
+{
+  "name": "simeon-portfolio",
+  "private": true,
+  "type": "module",
+  "scripts": { "dev": "node dev-server.mjs" },
+  "dependencies": { "@netlify/blobs": "^8.1.0" }
+}

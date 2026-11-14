@@ -1,0 +1,738 @@
+{
+  "name": "Back office · Invoice inbox to books",
+  "nodes": [
+    {
+      "id": "5h0wca5e-0007-4000-8000-000000000001",
+      "name": "New invoice in the inbox",
+      "type": "n8n-nodes-base.googleDriveTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "triggerOn": "specificFolder",
+        "folderToWatch": {
+          "__rl": true,
+          "mode": "id",
+          "value": "RUN-SETUP-FIRST"
+        },
+        "event": "fileCreated",
+        "options": {}
+      }
+    },
+    {
+      "id": "5h0wca5e-0007-4000-8000-000000000002",
+      "name": "Download the invoice",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        220,
+        0
+      ],
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $json.id }}"
+        },
+        "options": {}
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000
+    },
+    {
+      "id": "5h0wca5e-0007-4000-8000-000000000003",
+      "name": "Build Claude request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const file = $input.first(), buf = await this.helpers.getBinaryDataBuffer(0, 'data');\n  const prompt = `Read this invoice and reply with ONLY a JSON object, copying the numbers exactly as printed (do not correct them):\n{\"vendor\": \"\", \"invoiceNumber\": \"\", \"invoiceDate\": \"YYYY-MM-DD\", \"dueDate\": \"YYYY-MM-DD or empty\", \"currency\": \"USD\", \"lines\": [{\"description\": \"\", \"quantity\": 0, \"unitPrice\": 0, \"amount\": 0}], \"subtotal\": 0, \"tax\": 0, \"total\": 0}`;\n  return [{ json: { fileId: file.json.id, fileName: file.json.name, body: { model: 'claude-sonnet-5-5', max_tokens: 1500, messages: [{ role: 'user', content: [{ type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: buf.toString('base64') } }, { type: 'text', text: prompt }] }] } } }];"
+      }
+    },
+    {
+      "id": "5h0wca5e-0007-4000-8000-000000000004",
+      "name": "Claude: read the invoice",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        660,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "options": {
+          "timeout": 120000
+        },
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "anthropicApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.body) }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            }
+          ]
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000
+    },
+    {
+      "id": "5h0wca5e-0007-4000-8000-000000000005",
+      "name": "Check the maths",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const raw = ($json.content || []).filter(c => c.type === 'text').map(c => c.text).join('');\nlet ai = null;\nfor (let i = raw.indexOf('{'); i >= 0 && !ai; i = raw.indexOf('{', i + 1)) {\n  let depth = 0, inStr = false, esc = false;\n  for (let k = i; k < raw.length; k++) {\n    const ch = raw[k];\n    if (inStr) { if (esc) esc = false; else if (ch === '\\\\') esc = true; else if (ch === '\"') inStr = false; }\n    else if (ch === '\"') inStr = true;\n    else if (ch === '{') depth++;\n    else if (ch === '}' && --depth === 0) { try { ai = JSON.parse(raw.slice(i, k + 1)); } catch (e) {} break; }\n  }\n}\nif (!ai) throw new Error('Claude did not return JSON: ' + raw.slice(0, 200));\n  // AI reads; code checks. Money is compared in cents so rounding cannot hide a mistake.\n  const src = $('Build Claude request').first().json, cents = v => Math.round(Number(v) * 100), problems = [];\n  const lines = Array.isArray(ai.lines) ? ai.lines : [];\n  if (!ai.vendor) problems.push('No vendor name found');\n  if (!ai.invoiceNumber) problems.push('No invoice number found');\n  if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(ai.invoiceDate || '')) problems.push('Invoice date could not be read');\n  if (!(Number(ai.total) > 0)) problems.push('Total is missing or zero');\n  const lineSum = lines.reduce((s, l) => s + cents(l.amount), 0);\n  for (const l of lines) if (cents(l.quantity * l.unitPrice) !== cents(l.amount)) problems.push(`Line \"${String(l.description).slice(0, 40)}\": ${l.quantity} x ${l.unitPrice} is not ${l.amount}`);\n  if (lines.length && lineSum !== cents(ai.subtotal)) problems.push(`Lines add up to ${(lineSum / 100).toFixed(2)} but the subtotal says ${Number(ai.subtotal).toFixed(2)}`);\n  if (cents(ai.subtotal) + cents(ai.tax || 0) !== cents(ai.total)) problems.push(`Subtotal + tax is ${((cents(ai.subtotal) + cents(ai.tax || 0)) / 100).toFixed(2)} but the total says ${Number(ai.total).toFixed(2)}`);\n  return [{ json: { ...src, body: undefined, vendor: String(ai.vendor || ''), invoiceNumber: String(ai.invoiceNumber || ''), invoiceDate: ai.invoiceDate || '', dueDate: ai.dueDate || '', currency: ai.currency || 'USD', subtotal: Number(ai.subtotal) || 0, tax: Number(ai.tax) || 0, total: Number(ai.total) || 0, lineCount: lines.length, problems } }];"
+      }
+    },
+    {
+      "id": "5h0wca5e-0007-4000-8000-000000000006",
+      "name": "Load the books",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1100,
+        0
+      ],
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "RUN-SETUP-FIRST"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Books"
+        },
+        "options": {}
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000,
+      "alwaysOutputData": true
+    },
+    {
+      "id": "5h0wca5e-0007-4000-8000-000000000007",
+      "name": "Seen before?",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1320,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const inv = $('Check the maths').first().json, key = s => String(s || '').toLowerCase().replace(/[^a-z0-9]/g, '');\n  const dup = $input.all().map(i => i.json).find(r => key(r['Invoice no']) === key(inv.invoiceNumber) && key(r.Vendor) === key(inv.vendor) && inv.invoiceNumber);\n  const problems = [...inv.problems, ...(dup ? [`Duplicate: invoice ${inv.invoiceNumber} from ${inv.vendor} was already logged on ${dup.Logged}`] : [])];\n  return [{ json: { ...inv, problems, ok: problems.length === 0, link: 'https://drive.google.com/file/d/' + inv.fileId + '/view' } }];"
+      }
+    },
+    {
+      "id": "5h0wca5e-0007-4000-8000-000000000009",
+      "name": "All checks passed?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1540,
+        0
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "5h0wca5e-0007-4000-8000-000000000008",
+              "leftValue": "={{ $json.ok }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "5h0wca5e-0007-4000-8000-000000000010",
+      "name": "Add to the books",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1760,
+        -140
+      ],
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "RUN-SETUP-FIRST"
+        },
+        "operation": "append",
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Books"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Logged": "={{ $now.toFormat('yyyy-LL-dd HH:mm:ss') }}",
+            "Vendor": "={{ $('Seen before?').first().json.vendor }}",
+            "Invoice no": "={{ $('Seen before?').first().json.invoiceNumber }}",
+            "Invoice date": "={{ $('Seen before?').first().json.invoiceDate }}",
+            "Due date": "={{ $('Seen before?').first().json.dueDate }}",
+            "Subtotal": "={{ $('Seen before?').first().json.subtotal }}",
+            "Tax": "={{ $('Seen before?').first().json.tax }}",
+            "Total": "={{ $('Seen before?').first().json.total }}",
+            "Currency": "={{ $('Seen before?').first().json.currency }}",
+            "Checks": "={{ $('Seen before?').first().json.lineCount + ' lines, totals agree' }}",
+            "File": "={{ $('Seen before?').first().json.link }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Logged",
+              "displayName": "Logged",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Vendor",
+              "displayName": "Vendor",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Invoice no",
+              "displayName": "Invoice no",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Invoice date",
+              "displayName": "Invoice date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Due date",
+              "displayName": "Due date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Subtotal",
+              "displayName": "Subtotal",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Tax",
+              "displayName": "Tax",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Total",
+              "displayName": "Total",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Currency",
+              "displayName": "Currency",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Checks",
+              "displayName": "Checks",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "File",
+              "displayName": "File",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ]
+        },
+        "options": {
+          "cellFormat": "RAW"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000
+    },
+    {
+      "id": "5h0wca5e-0007-4000-8000-000000000011",
+      "name": "Send to approval queue",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1760,
+        140
+      ],
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "RUN-SETUP-FIRST"
+        },
+        "operation": "append",
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Approval Queue"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Logged": "={{ $now.toFormat('yyyy-LL-dd HH:mm:ss') }}",
+            "Vendor": "={{ $('Seen before?').first().json.vendor }}",
+            "Invoice no": "={{ $('Seen before?').first().json.invoiceNumber }}",
+            "Total": "={{ $('Seen before?').first().json.total }}",
+            "Problem": "={{ $('Seen before?').first().json.problems.join(' | ') }}",
+            "File": "={{ $('Seen before?').first().json.link }}",
+            "Decision": ""
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Logged",
+              "displayName": "Logged",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Vendor",
+              "displayName": "Vendor",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Invoice no",
+              "displayName": "Invoice no",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Total",
+              "displayName": "Total",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Problem",
+              "displayName": "Problem",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "File",
+              "displayName": "File",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Decision",
+              "displayName": "Decision",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ]
+        },
+        "options": {
+          "cellFormat": "RAW"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000
+    },
+    {
+      "id": "5h0wca5e-0007-4000-8000-000000000012",
+      "name": "Tell the owner",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1980,
+        140
+      ],
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "RUN-SETUP-FIRST"
+        },
+        "operation": "append",
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Outbox"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Time": "={{ $now.toFormat('yyyy-LL-dd HH:mm:ss') }}",
+            "Workflow": "Invoices",
+            "Ref": "",
+            "Channel": "Email",
+            "To": "Practice manager",
+            "Message": "={{ 'An invoice needs your decision: ' + $('Seen before?').first().json.vendor + ' ' + $('Seen before?').first().json.invoiceNumber + ' for ' + $('Seen before?').first().json.total.toFixed(2) + '. ' + $('Seen before?').first().json.problems.join(' ') }}",
+            "Status": "Queued (demo outbox)"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Time",
+              "displayName": "Time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Workflow",
+              "displayName": "Workflow",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Channel",
+              "displayName": "Channel",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "To",
+              "displayName": "To",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Message",
+              "displayName": "Message",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Ref",
+              "displayName": "Ref",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ]
+        },
+        "options": {
+          "cellFormat": "RAW"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000
+    },
+    {
+      "id": "5h0wca5e-0007-4000-8000-000000000013",
+      "name": "Move file to Processed",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2200,
+        0
+      ],
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{ 'https://www.googleapis.com/drive/v3/files/' + $('Seen before?').first().json.fileId + '?addParents=RUN-SETUP-FIRST&removeParents=RUN-SETUP-FIRST' }}",
+        "options": {
+          "timeout": 120000
+        },
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleDriveOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({}) }}"
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000
+    }
+  ],
+  "connections": {
+    "New invoice in the inbox": {
+      "main": [
+        [
+          {
+            "node": "Download the invoice",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download the invoice": {
+      "main": [
+        [
+          {
+            "node": "Build Claude request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Claude request": {
+      "main": [
+        [
+          {
+            "node": "Claude: read the invoice",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude: read the invoice": {
+      "main": [
+        [
+          {
+            "node": "Check the maths",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check the maths": {
+      "main": [
+        [
+          {
+            "node": "Load the books",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load the books": {
+      "main": [
+        [
+          {
+            "node": "Seen before?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Seen before?": {
+      "main": [
+        [
+          {
+            "node": "All checks passed?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "All checks passed?": {
+      "main": [
+        [
+          {
+            "node": "Add to the books",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send to approval queue",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Add to the books": {
+      "main": [
+        [
+          {
+            "node": "Move file to Processed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send to approval queue": {
+      "main": [
+        [
+          {
+            "node": "Tell the owner",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tell the owner": {
+      "main": [
+        [
+          {
+            "node": "Move file to Processed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveManualExecutions": true
+  }
+}

@@ -1,0 +1,26 @@
+# Only site/ is published. The backend code, notes and config in this folder stay private.
+[build]
+  publish = "site"
+
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
+
+# The secret door must never show up in Google.
+[[headers]]
+  for = "/door/*"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow"
+    Cache-Control = "no-store"
+    X-Frame-Options = "DENY"
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=604800"

@@ -1,0 +1,573 @@
+{
+  "name": "Coaching · Discovery call to proposal",
+  "nodes": [
+    {
+      "id": "5h0wca5e-0006-4000-8000-000000000001",
+      "name": "New call transcript",
+      "type": "n8n-nodes-base.googleDriveTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "triggerOn": "specificFolder",
+        "folderToWatch": {
+          "__rl": true,
+          "mode": "id",
+          "value": "RUN-SETUP-FIRST"
+        },
+        "event": "fileCreated",
+        "options": {}
+      }
+    },
+    {
+      "id": "5h0wca5e-0006-4000-8000-000000000002",
+      "name": "Download the transcript",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        220,
+        0
+      ],
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $json.id }}"
+        },
+        "options": {}
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000
+    },
+    {
+      "id": "5h0wca5e-0006-4000-8000-000000000003",
+      "name": "Build Claude request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const buf = await this.helpers.getBinaryDataBuffer(0, 'data');\n  const transcript = buf.toString('utf8').slice(0, 60000);\n  const prompt = `You are the assistant to Dana Whitfield, a leadership coach. Read this discovery-call transcript and reply with ONLY a JSON object:\n{\"client\": \"full name\", \"company\": \"\", \"role\": \"\",\n \"goals\": [\"3 to 5 short bullets, in the client's own terms\"],\n \"challenges\": [\"2 to 4 short bullets\"],\n \"objections\": [\"what might stop them buying, 1 to 3 bullets\"],\n \"nextSteps\": [\"who does what by when, from the call only\"],\n \"programme\": one of [\"Starter sprint (4 weeks)\", \"Director programme (12 weeks)\", \"Advisory retainer (monthly)\"],\n \"situation\": \"one paragraph for the proposal: where they are now\",\n \"outcomes\": [\"3 measurable outcomes to agree, based on what was said\"],\n \"approach\": \"one paragraph: how the programme would run for this client\",\n \"followUpEmail\": \"a short, warm follow-up email from Dana, plain text, no price\"}\nUse only what is in the transcript. Do not invent prices, dates or results.\n\nTRANSCRIPT:\n${transcript}`;\n  return [{ json: { fileName: $input.first().json.name || $('New call transcript').first().json.name, body: { model: 'claude-sonnet-5-5', max_tokens: 2000, messages: [{ role: 'user', content: prompt }] } } }];"
+      }
+    },
+    {
+      "id": "5h0wca5e-0006-4000-8000-000000000004",
+      "name": "Claude: notes and proposal",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        660,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "options": {
+          "timeout": 120000
+        },
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "anthropicApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.body) }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            }
+          ]
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000
+    },
+    {
+      "id": "5h0wca5e-0006-4000-8000-000000000005",
+      "name": "Check the notes",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const raw = ($json.content || []).filter(c => c.type === 'text').map(c => c.text).join('');\nlet ai = null;\nfor (let i = raw.indexOf('{'); i >= 0 && !ai; i = raw.indexOf('{', i + 1)) {\n  let depth = 0, inStr = false, esc = false;\n  for (let k = i; k < raw.length; k++) {\n    const ch = raw[k];\n    if (inStr) { if (esc) esc = false; else if (ch === '\\\\') esc = true; else if (ch === '\"') inStr = false; }\n    else if (ch === '\"') inStr = true;\n    else if (ch === '{') depth++;\n    else if (ch === '}' && --depth === 0) { try { ai = JSON.parse(raw.slice(i, k + 1)); } catch (e) {} break; }\n  }\n}\nif (!ai) throw new Error('Claude did not return JSON: ' + raw.slice(0, 200));\n  const list = v => (Array.isArray(v) ? v : [v]).filter(Boolean).map(String).slice(0, 6);\n  if (!ai.client) throw new Error('No client name found in the transcript');\n  const programmes = ['Starter sprint (4 weeks)', 'Director programme (12 weeks)', 'Advisory retainer (monthly)'];\n  const n = { client: String(ai.client), company: String(ai.company || ''), role: String(ai.role || ''), goals: list(ai.goals), challenges: list(ai.challenges), objections: list(ai.objections), nextSteps: list(ai.nextSteps), programme: programmes.includes(ai.programme) ? ai.programme : programmes[1], situation: String(ai.situation || ''), outcomes: list(ai.outcomes), approach: String(ai.approach || ''), followUpEmail: String(ai.followUpEmail || '') };\n  // build the proposal document: text first, then heading styles by position\n  const parts = [['TITLE', `Coaching proposal for ${n.client}`], ['', `${n.company}\\nPrepared by Dana Whitfield, Whitfield Leadership Coaching\\n${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}`],\n    ['HEADING_1', 'Where you are now'], ['', n.situation], ['HEADING_1', 'What we will work towards'], ['', n.outcomes.map(o => '•  ' + o).join('\\n')],\n    ['HEADING_1', 'How it works'], ['', `Recommended: ${n.programme}\\n${n.approach}`], ['HEADING_1', 'Investment'], ['', '[Dana to add the fee before sending]'],\n    ['HEADING_1', 'Next steps'], ['', n.nextSteps.map(o => '•  ' + o).join('\\n')]];\n  let text = '', requests = [];\n  for (const [style, t] of parts) { const start = 1 + text.length; text += t + '\\n'; if (style) requests.push({ updateParagraphStyle: { range: { startIndex: start, endIndex: start + t.length }, paragraphStyle: { namedStyleType: style }, fields: 'namedStyleType' } }); }\n  requests.unshift({ insertText: { location: { index: 1 }, text } });\n  return [{ json: { ...n, docTitle: `Proposal - ${n.client}`, requests } }];"
+      }
+    },
+    {
+      "id": "5h0wca5e-0006-4000-8000-000000000006",
+      "name": "Create the proposal",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1100,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://docs.googleapis.com/v1/documents",
+        "options": {
+          "timeout": 120000
+        },
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleDocsOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ title: $json.docTitle }) }}"
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000
+    },
+    {
+      "id": "5h0wca5e-0006-4000-8000-000000000007",
+      "name": "Write the proposal",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1320,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ 'https://docs.googleapis.com/v1/documents/' + $json.documentId + ':batchUpdate' }}",
+        "options": {
+          "timeout": 120000
+        },
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleDocsOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ requests: $('Check the notes').first().json.requests }) }}"
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000
+    },
+    {
+      "id": "5h0wca5e-0006-4000-8000-000000000008",
+      "name": "File it in Proposals",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1540,
+        0
+      ],
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{ 'https://www.googleapis.com/drive/v3/files/' + $('Create the proposal').first().json.documentId + '?addParents=RUN-SETUP-FIRST&removeParents=root' }}",
+        "options": {
+          "timeout": 120000
+        },
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleDriveOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({}) }}"
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000
+    },
+    {
+      "id": "5h0wca5e-0006-4000-8000-000000000009",
+      "name": "Update the CRM",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1760,
+        0
+      ],
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "RUN-SETUP-FIRST"
+        },
+        "operation": "appendOrUpdate",
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Coach CRM"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Client": "={{ $('Check the notes').first().json.client }}",
+            "Company": "={{ $('Check the notes').first().json.company }}",
+            "Role": "={{ $('Check the notes').first().json.role }}",
+            "Stage": "Proposal drafted",
+            "Goals": "={{ $('Check the notes').first().json.goals.join('\\n') }}",
+            "Challenges": "={{ $('Check the notes').first().json.challenges.join('\\n') }}",
+            "Objections": "={{ $('Check the notes').first().json.objections.join('\\n') }}",
+            "Next steps": "={{ $('Check the notes').first().json.nextSteps.join('\\n') }}",
+            "Recommended programme": "={{ $('Check the notes').first().json.programme }}",
+            "Proposal": "={{ 'https://docs.google.com/document/d/' + $('Create the proposal').first().json.documentId + '/edit' }}",
+            "Last updated": "={{ $now.toFormat('yyyy-LL-dd HH:mm:ss') }}"
+          },
+          "matchingColumns": [
+            "Client"
+          ],
+          "schema": [
+            {
+              "id": "Client",
+              "displayName": "Client",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Company",
+              "displayName": "Company",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Role",
+              "displayName": "Role",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Stage",
+              "displayName": "Stage",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Goals",
+              "displayName": "Goals",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Challenges",
+              "displayName": "Challenges",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Objections",
+              "displayName": "Objections",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Next steps",
+              "displayName": "Next steps",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Recommended programme",
+              "displayName": "Recommended programme",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Proposal",
+              "displayName": "Proposal",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Last updated",
+              "displayName": "Last updated",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ]
+        },
+        "options": {
+          "cellFormat": "RAW"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000
+    },
+    {
+      "id": "5h0wca5e-0006-4000-8000-000000000010",
+      "name": "Save follow-up as a draft",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1980,
+        0
+      ],
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "RUN-SETUP-FIRST"
+        },
+        "operation": "append",
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Outbox"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Time": "={{ $now.toFormat('yyyy-LL-dd HH:mm:ss') }}",
+            "Workflow": "Call to proposal",
+            "Ref": "",
+            "Channel": "Email draft",
+            "To": "={{ $('Check the notes').first().json.client }}",
+            "Message": "={{ $('Check the notes').first().json.followUpEmail }}",
+            "Status": "Draft: waiting for Dana to review and add the fee"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Time",
+              "displayName": "Time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Workflow",
+              "displayName": "Workflow",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Channel",
+              "displayName": "Channel",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "To",
+              "displayName": "To",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Message",
+              "displayName": "Message",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Ref",
+              "displayName": "Ref",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ]
+        },
+        "options": {
+          "cellFormat": "RAW"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000
+    }
+  ],
+  "connections": {
+    "New call transcript": {
+      "main": [
+        [
+          {
+            "node": "Download the transcript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download the transcript": {
+      "main": [
+        [
+          {
+            "node": "Build Claude request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Claude request": {
+      "main": [
+        [
+          {
+            "node": "Claude: notes and proposal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude: notes and proposal": {
+      "main": [
+        [
+          {
+            "node": "Check the notes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check the notes": {
+      "main": [
+        [
+          {
+            "node": "Create the proposal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create the proposal": {
+      "main": [
+        [
+          {
+            "node": "Write the proposal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Write the proposal": {
+      "main": [
+        [
+          {
+            "node": "File it in Proposals",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "File it in Proposals": {
+      "main": [
+        [
+          {
+            "node": "Update the CRM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update the CRM": {
+      "main": [
+        [
+          {
+            "node": "Save follow-up as a draft",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveManualExecutions": true
+  }
+}

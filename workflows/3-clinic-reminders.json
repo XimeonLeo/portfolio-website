@@ -1,0 +1,699 @@
+{
+  "name": "Clinic · Reminders, no-show recovery and reviews",
+  "nodes": [
+    {
+      "id": "5h0wca5e-0005-4000-8000-000000000001",
+      "name": "Every 15 minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        -100
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "*/15 * * * *"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "5h0wca5e-0005-4000-8000-000000000002",
+      "name": "Run now",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        120
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "5h0wca5e-0005-4000-8000-000000000003",
+      "name": "Load appointments",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        220,
+        0
+      ],
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "RUN-SETUP-FIRST"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Clinic Appointments"
+        },
+        "options": {}
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000
+    },
+    {
+      "id": "5h0wca5e-0005-4000-8000-000000000004",
+      "name": "What is due?",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Plain rules. Each appointment can need at most one message per run.\n  const now = Date.now(), H = 3600e3, due = [];\n  for (const a of $input.all().map(i => i.json)) {\n    const start = new Date(String(a.Starts).replace(' ', 'T')).getTime(); if (!a['Appt ID'] || isNaN(start)) continue;\n    const until = (start - now) / H, first = String(a.Patient).split(' ')[0];\n    const when = new Date(start).toLocaleString('en-US', { weekday: 'long', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });\n    const base = { id: a['Appt ID'], patient: a.Patient, first, phone: a.Phone, when };\n    if (a.Status === 'No-show' && !a['Rebook offer']) due.push({ ...base, type: 'No-show', column: 'Rebook offer' });\n    else if (a.Status === 'Completed' && !a['Review request'] && until < -2) due.push({ ...base, type: 'Review', column: 'Review request' });\n    else if (['Booked', 'Confirmed'].includes(a.Status) && until > 0 && until <= 2 && !a['Reminder 2h']) due.push({ ...base, type: '2 hours', column: 'Reminder 2h' });\n    else if (a.Status === 'Booked' && until > 2 && until <= 48 && !a['Reminder 48h']) due.push({ ...base, type: '48 hours', column: 'Reminder 48h' });\n  }\n  return due.map(json => ({ json }));"
+      }
+    },
+    {
+      "id": "5h0wca5e-0005-4000-8000-000000000009",
+      "name": "Which message?",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [
+        660,
+        0
+      ],
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose"
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "id": "5h0wca5e-0005-4000-8000-000000000005",
+                    "leftValue": "={{ $json.type }}",
+                    "rightValue": "48 hours",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "48-hour reminder"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose"
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "id": "5h0wca5e-0005-4000-8000-000000000006",
+                    "leftValue": "={{ $json.type }}",
+                    "rightValue": "2 hours",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "2-hour reminder"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose"
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "id": "5h0wca5e-0005-4000-8000-000000000007",
+                    "leftValue": "={{ $json.type }}",
+                    "rightValue": "No-show",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "No-show"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose"
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "id": "5h0wca5e-0005-4000-8000-000000000008",
+                    "leftValue": "={{ $json.type }}",
+                    "rightValue": "Review",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "Review request"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "5h0wca5e-0005-4000-8000-000000000010",
+      "name": "48-hour reminder",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        -300
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "return { json: { ...$json, message: `Hi ${$json.first}, a reminder of your appointment at Brightside Family Clinic on ${$json.when}. Reply C to confirm or R to reschedule.` } };"
+      }
+    },
+    {
+      "id": "5h0wca5e-0005-4000-8000-000000000011",
+      "name": "2-hour reminder",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        -100
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "return { json: { ...$json, message: `Hi ${$json.first}, we will see you at Brightside Family Clinic today at ${$json.when.split(', ').pop()}. Running late? Reply and we will let the front desk know.` } };"
+      }
+    },
+    {
+      "id": "5h0wca5e-0005-4000-8000-000000000012",
+      "name": "Offer to rebook",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        100
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "return { json: { ...$json, message: `Hi ${$json.first}, sorry we missed you today. You can pick a new time here: brightsideclinic.example/rebook or reply and we will call you.` } };"
+      }
+    },
+    {
+      "id": "5h0wca5e-0005-4000-8000-000000000013",
+      "name": "Ask for a review",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        300
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "return { json: { ...$json, message: `Hi ${$json.first}, thank you for visiting Brightside Family Clinic. If you have a minute, we would be grateful for a review: brightsideclinic.example/review` } };"
+      }
+    },
+    {
+      "id": "5h0wca5e-0005-4000-8000-000000000014",
+      "name": "Queue the text",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1100,
+        0
+      ],
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "RUN-SETUP-FIRST"
+        },
+        "operation": "append",
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Outbox"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Time": "={{ $now.toFormat('yyyy-LL-dd HH:mm:ss') }}",
+            "Workflow": "Clinic reminders",
+            "Ref": "={{ $json.id + '|' + $json.column }}",
+            "Channel": "SMS",
+            "To": "={{ $json.phone }}",
+            "Message": "={{ $json.message }}",
+            "Status": "Queued (demo outbox)"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Time",
+              "displayName": "Time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Workflow",
+              "displayName": "Workflow",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Channel",
+              "displayName": "Channel",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "To",
+              "displayName": "To",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Message",
+              "displayName": "Message",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Ref",
+              "displayName": "Ref",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ]
+        },
+        "options": {
+          "cellFormat": "RAW"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000
+    },
+    {
+      "id": "5h0wca5e-0005-4000-8000-000000000015",
+      "name": "Stamp to write back",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1320,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const [id, column] = String($json.Ref).split('|'); return { json: { 'Appt ID': id, [column]: 'Sent ' + new Date().toISOString().slice(0, 16).replace('T', ' ') } };"
+      }
+    },
+    {
+      "id": "5h0wca5e-0005-4000-8000-000000000016",
+      "name": "Mark as sent",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1540,
+        0
+      ],
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "RUN-SETUP-FIRST"
+        },
+        "operation": "update",
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Clinic Appointments"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [
+            "Appt ID"
+          ],
+          "schema": []
+        },
+        "options": {}
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000
+    },
+    {
+      "id": "5h0wca5e-0005-4000-8000-000000000017",
+      "name": "Front-desk list",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        420
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const items = $input.all().map(i => i.json); if (!items.length) return [];\n  const count = t => items.filter(i => i.type === t).length;\n  const noshow = items.filter(i => i.type === 'No-show').map(i => i.patient).join(', ');\n  return [{ json: { text: `This run: ${count('48 hours')} reminder(s) for the day after tomorrow, ${count('2 hours')} for today, ${count('No-show')} rebooking offer(s), ${count('Review')} review request(s).${noshow ? ' To call if they do not rebook: ' + noshow + '.' : ''}` } }];"
+      }
+    },
+    {
+      "id": "5h0wca5e-0005-4000-8000-000000000018",
+      "name": "Send list to front desk",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        880,
+        520
+      ],
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "RUN-SETUP-FIRST"
+        },
+        "operation": "append",
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Outbox"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Time": "={{ $now.toFormat('yyyy-LL-dd HH:mm:ss') }}",
+            "Workflow": "Clinic reminders",
+            "Ref": "",
+            "Channel": "Email",
+            "To": "Front desk",
+            "Message": "={{ $json.text }}",
+            "Status": "Queued (demo outbox)"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Time",
+              "displayName": "Time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Workflow",
+              "displayName": "Workflow",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Channel",
+              "displayName": "Channel",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "To",
+              "displayName": "To",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Message",
+              "displayName": "Message",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Ref",
+              "displayName": "Ref",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ]
+        },
+        "options": {
+          "cellFormat": "RAW"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000
+    }
+  ],
+  "connections": {
+    "Every 15 minutes": {
+      "main": [
+        [
+          {
+            "node": "Load appointments",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Run now": {
+      "main": [
+        [
+          {
+            "node": "Load appointments",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load appointments": {
+      "main": [
+        [
+          {
+            "node": "What is due?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "What is due?": {
+      "main": [
+        [
+          {
+            "node": "Which message?",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Front-desk list",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Which message?": {
+      "main": [
+        [
+          {
+            "node": "48-hour reminder",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "2-hour reminder",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Offer to rebook",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Ask for a review",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "48-hour reminder": {
+      "main": [
+        [
+          {
+            "node": "Queue the text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "2-hour reminder": {
+      "main": [
+        [
+          {
+            "node": "Queue the text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Offer to rebook": {
+      "main": [
+        [
+          {
+            "node": "Queue the text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ask for a review": {
+      "main": [
+        [
+          {
+            "node": "Queue the text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Queue the text": {
+      "main": [
+        [
+          {
+            "node": "Stamp to write back",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Stamp to write back": {
+      "main": [
+        [
+          {
+            "node": "Mark as sent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Front-desk list": {
+      "main": [
+        [
+          {
+            "node": "Send list to front desk",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveManualExecutions": true
+  }
+}

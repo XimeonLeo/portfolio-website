@@ -1,0 +1,681 @@
+{
+  "name": "Website chatbot · Answers and lead capture",
+  "nodes": [
+    {
+      "id": "5h0wca5e-0010-4000-8000-000000000002",
+      "name": "Message from the website chat",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "demo-web-chat",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "webhookId": "5h0wca5e-0010-4000-8000-000000000001"
+    },
+    {
+      "id": "5h0wca5e-0010-4000-8000-000000000003",
+      "name": "Tidy the message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const b = $input.first().json.body || {};\n  const text = String(b.text || '').trim().slice(0, 1000), session = String(b.session || 'anon').replace(/[^a-zA-Z0-9-]/g, '').slice(0, 40) || 'anon';\n  if (!text) throw new Error('Empty message');\n  return [{ json: { text, session, channel: 'Website', business: 'Whitfield Coaching', time: new Date().toISOString().slice(0, 19).replace('T', ' ') } }];"
+      }
+    },
+    {
+      "id": "5h0wca5e-0010-4000-8000-000000000004",
+      "name": "Load what the bot knows",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        440,
+        0
+      ],
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "RUN-SETUP-FIRST"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Bot Knowledge"
+        },
+        "options": {}
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000,
+      "executeOnce": true,
+      "alwaysOutputData": true
+    },
+    {
+      "id": "5h0wca5e-0010-4000-8000-000000000005",
+      "name": "Load the conversation",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        660,
+        0
+      ],
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "RUN-SETUP-FIRST"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Chat Log"
+        },
+        "options": {}
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000,
+      "executeOnce": true,
+      "alwaysOutputData": true
+    },
+    {
+      "id": "5h0wca5e-0010-4000-8000-000000000006",
+      "name": "Build Claude request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const m = $('Tidy the message').first().json;\n  const facts = $('Load what the bot knows').all().map(i => i.json).filter(r => r.Business === m.business).map(r => `- ${r.Topic}: ${r.Answer}`).join('\\n');\n  const history = $('Load the conversation').all().map(i => i.json).filter(r => r.Session === m.session).slice(-12).map(r => ({ role: r.Who === 'Visitor' ? 'user' : 'assistant', content: String(r.Message) }));\n  const system = `You are the website assistant for Whitfield Leadership Coaching. Be warm, brief (under 60 words) and plain. No emojis.\nAnswer ONLY from these notes. If the notes do not cover it, say you are not sure and offer a discovery call. Never quote a price.\nNOTES:\n${facts}\n\nYour goal is to help, then offer the free discovery call when it fits. To book it you need the visitor's name and email: ask for whichever is missing, one question at a time.\nReply with ONLY a JSON object: {\"reply\": \"what you say to the visitor\", \"lead\": {\"name\": \"\", \"email\": \"\", \"interest\": \"one short line\"} or null}\nFill \"lead\" only once you have BOTH a name and an email from the visitor's own messages.`;\n  return [{ json: { ...m, body: { model: 'claude-sonnet-5-5', max_tokens: 500, system, messages: [...history, { role: 'user', content: m.text }] } } }];"
+      }
+    },
+    {
+      "id": "5h0wca5e-0010-4000-8000-000000000007",
+      "name": "Claude: write the reply",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1100,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "options": {
+          "timeout": 120000
+        },
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "anthropicApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.body) }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            }
+          ]
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000
+    },
+    {
+      "id": "5h0wca5e-0010-4000-8000-000000000008",
+      "name": "Check the reply",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1320,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const raw = ($json.content || []).filter(c => c.type === 'text').map(c => c.text).join('');\nlet ai = null;\nfor (let i = raw.indexOf('{'); i >= 0 && !ai; i = raw.indexOf('{', i + 1)) {\n  let depth = 0, inStr = false, esc = false;\n  for (let k = i; k < raw.length; k++) {\n    const ch = raw[k];\n    if (inStr) { if (esc) esc = false; else if (ch === '\\\\') esc = true; else if (ch === '\"') inStr = false; }\n    else if (ch === '\"') inStr = true;\n    else if (ch === '{') depth++;\n    else if (ch === '}' && --depth === 0) { try { ai = JSON.parse(raw.slice(i, k + 1)); } catch (e) {} break; }\n  }\n}\nif (!ai) throw new Error('Claude did not return JSON: ' + raw.slice(0, 200));\n  const m = $('Build Claude request').first().json;\n  let reply = String(ai.reply || '').trim().slice(0, 700) || 'Sorry, I did not catch that. Could you say it another way?';\n  if (/[$£€]\\s?\\d/.test(reply)) reply = 'Prices depend on the programme, and Dana confirms them on a free discovery call. Would you like me to set one up?';\n  const l = ai.lead || {}, emailOk = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(String(l.email || ''));\n  const lead = l.name && emailOk ? { name: String(l.name).slice(0, 80), email: String(l.email).toLowerCase(), interest: String(l.interest || '').slice(0, 160) } : null;\n  return [{ json: { session: m.session, channel: m.channel, time: m.time, text: m.text, reply, lead, isLead: !!lead } }];"
+      }
+    },
+    {
+      "id": "5h0wca5e-0010-4000-8000-000000000009",
+      "name": "Send the reply back",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1540,
+        0
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ reply: $json.reply, lead: $json.isLead }) }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "5h0wca5e-0010-4000-8000-000000000010",
+      "name": "Two log lines",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1760,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const j = $('Check the reply').first().json;\n  return [{ json: { time: j.time, channel: j.channel, session: j.session, who: 'Visitor', message: j.text } }, { json: { time: j.time, channel: j.channel, session: j.session, who: 'Assistant', message: j.reply } }];"
+      }
+    },
+    {
+      "id": "5h0wca5e-0010-4000-8000-000000000011",
+      "name": "Save to the chat log",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1980,
+        0
+      ],
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "RUN-SETUP-FIRST"
+        },
+        "operation": "append",
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Chat Log"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Time": "={{ $json.time }}",
+            "Channel": "={{ $json.channel }}",
+            "Session": "={{ $json.session }}",
+            "Who": "={{ $json.who }}",
+            "Message": "={{ $json.message }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Time",
+              "displayName": "Time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Channel",
+              "displayName": "Channel",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Session",
+              "displayName": "Session",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Who",
+              "displayName": "Who",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Message",
+              "displayName": "Message",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ]
+        },
+        "options": {
+          "cellFormat": "RAW"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000
+    },
+    {
+      "id": "5h0wca5e-0010-4000-8000-000000000013",
+      "name": "New lead?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        2200,
+        0
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "5h0wca5e-0010-4000-8000-000000000012",
+              "leftValue": "={{ $('Check the reply').first().json.isLead }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "executeOnce": true
+    },
+    {
+      "id": "5h0wca5e-0010-4000-8000-000000000014",
+      "name": "Save the lead",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        2420,
+        -80
+      ],
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "RUN-SETUP-FIRST"
+        },
+        "operation": "appendOrUpdate",
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Chat Leads"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Time": "={{ $('Check the reply').first().json.time }}",
+            "Channel": "Website chat",
+            "Name": "={{ $('Check the reply').first().json.lead.name }}",
+            "Contact": "={{ $('Check the reply').first().json.lead.email }}",
+            "Interest": "={{ $('Check the reply').first().json.lead.interest }}",
+            "Summary": "={{ 'Asked for a discovery call in the website chat.' }}",
+            "Status": "New: to call"
+          },
+          "matchingColumns": [
+            "Contact"
+          ],
+          "schema": [
+            {
+              "id": "Time",
+              "displayName": "Time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Channel",
+              "displayName": "Channel",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Contact",
+              "displayName": "Contact",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Interest",
+              "displayName": "Interest",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Summary",
+              "displayName": "Summary",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ]
+        },
+        "options": {
+          "cellFormat": "RAW"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000
+    },
+    {
+      "id": "5h0wca5e-0010-4000-8000-000000000015",
+      "name": "Tell the coach",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        2640,
+        -80
+      ],
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "RUN-SETUP-FIRST"
+        },
+        "operation": "append",
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Outbox"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Time": "={{ $now.toFormat('yyyy-LL-dd HH:mm:ss') }}",
+            "Workflow": "Website chatbot",
+            "Ref": "",
+            "Channel": "Email",
+            "To": "Dana (owner)",
+            "Message": "={{ 'New lead from the website chat: ' + $('Check the reply').first().json.lead.name + ', ' + $('Check the reply').first().json.lead.email + '. Interested in: ' + $('Check the reply').first().json.lead.interest }}",
+            "Status": "Queued (demo outbox)"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Time",
+              "displayName": "Time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Workflow",
+              "displayName": "Workflow",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Channel",
+              "displayName": "Channel",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "To",
+              "displayName": "To",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Message",
+              "displayName": "Message",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Ref",
+              "displayName": "Ref",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ]
+        },
+        "options": {
+          "cellFormat": "RAW"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000
+    }
+  ],
+  "connections": {
+    "Message from the website chat": {
+      "main": [
+        [
+          {
+            "node": "Tidy the message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tidy the message": {
+      "main": [
+        [
+          {
+            "node": "Load what the bot knows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load what the bot knows": {
+      "main": [
+        [
+          {
+            "node": "Load the conversation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load the conversation": {
+      "main": [
+        [
+          {
+            "node": "Build Claude request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Claude request": {
+      "main": [
+        [
+          {
+            "node": "Claude: write the reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude: write the reply": {
+      "main": [
+        [
+          {
+            "node": "Check the reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check the reply": {
+      "main": [
+        [
+          {
+            "node": "Send the reply back",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send the reply back": {
+      "main": [
+        [
+          {
+            "node": "Two log lines",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Two log lines": {
+      "main": [
+        [
+          {
+            "node": "Save to the chat log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save to the chat log": {
+      "main": [
+        [
+          {
+            "node": "New lead?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "New lead?": {
+      "main": [
+        [
+          {
+            "node": "Save the lead",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Save the lead": {
+      "main": [
+        [
+          {
+            "node": "Tell the coach",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveManualExecutions": true
+  }
+}

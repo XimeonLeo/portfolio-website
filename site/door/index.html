@@ -1,0 +1,264 @@
+<!doctype html>
+<html lang="en" data-admin>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow, noarchive">
+<title>Control room</title>
+<link rel="icon" href="data:,">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="../settings.js"></script>
+<style>
+:root{--bg:#11110E;--panel:#1B1B17;--line:#2C2B25;--text:#ECE8DD;--mute:#9A968A;--signal:#FF4F1A;--ok:#3DDC97;--sans:"Plus Jakarta Sans",system-ui,sans-serif;--mono:"JetBrains Mono",ui-monospace,Consolas,monospace}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--text);font:400 15px/1.5 var(--sans);-webkit-font-smoothing:antialiased}
+button,input,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+[hidden]{display:none !important}
+.eyebrow{font:500 11px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--mute);margin:0 0 14px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:11px 18px;border-radius:999px;border:1px solid var(--line);background:transparent;font-weight:600;font-size:14px;text-decoration:none;color:var(--text);transition:background .15s,border-color .15s,opacity .15s}
+.btn:hover{border-color:#55534a}
+.btn.primary{background:var(--signal);border-color:var(--signal);color:#fff}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn:disabled{opacity:.5;cursor:default}
+.btn:focus-visible,input:focus-visible,textarea:focus-visible,.sw:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
+
+/* login */
+.login{min-height:100%;display:grid;place-items:center;padding:24px;background:radial-gradient(600px 400px at 50% 30%,rgba(255,79,26,.10),transparent 70%)}
+.login-card{width:100%;max-width:380px;background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:34px 30px}
+.login-card h1{margin:0 0 6px;font-size:26px;letter-spacing:-.03em}
+.login-card p{margin:0 0 24px;color:var(--mute);font-size:14px}
+.keyhole{width:44px;height:44px;border-radius:13px;background:var(--bg);border:1px solid var(--line);display:grid;place-items:center;margin-bottom:22px;font-size:20px}
+label{display:block;font-size:12.5px;font-weight:600;color:var(--mute);margin:0 0 7px}
+input[type=text],input[type=password],input[type=email],input[type=url],input[type=tel],textarea{width:100%;background:var(--bg);border:1px solid var(--line);border-radius:11px;padding:11px 13px;font-size:14.5px}
+textarea{resize:vertical;min-height:74px;line-height:1.45}
+.err{color:#FF8A6B;font-size:13.5px;min-height:20px;margin:10px 0 0}
+.login-card .btn{width:100%;margin-top:16px;padding:13px}
+
+/* editor */
+.app{display:grid;grid-template-columns:400px minmax(0,1fr);height:100%}
+.side{display:flex;flex-direction:column;border-right:1px solid var(--line);min-height:0;background:var(--panel)}
+.side-head{padding:18px 22px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:12px}
+.side-head b{font-size:16px;letter-spacing:-.02em}
+.side-head .dot{width:8px;height:8px;border-radius:50%;background:var(--ok)}
+.side-head .sp{margin-left:auto;display:flex;gap:6px}
+.side-head .btn{padding:7px 12px;font-size:12.5px;font-weight:500}
+.form{flex:1;overflow:auto;padding:6px 22px 24px}
+.group{padding:22px 0;border-bottom:1px solid var(--line)}
+.group:last-child{border-bottom:0}
+.group h2{margin:0 0 4px;font-size:15px;letter-spacing:-.01em}
+.group .hint{margin:0 0 16px;color:var(--mute);font-size:13px}
+.field{margin-bottom:14px}
+.field:last-child{margin-bottom:0}
+.row2{display:grid;grid-template-columns:1fr 92px;gap:10px}
+.colours{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.colour{display:flex;align-items:center;gap:10px;background:var(--bg);border:1px solid var(--line);border-radius:11px;padding:8px 10px}
+.colour input[type=color]{width:34px;height:34px;border:0;padding:0;background:none;border-radius:8px;cursor:pointer;flex:none}
+.colour span{font-size:12.5px;line-height:1.25}
+.colour small{display:block;font:400 11px var(--mono);color:var(--mute);text-transform:uppercase}
+.presets{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+.sw{display:flex;align-items:center;gap:8px;padding:6px 11px 6px 7px;border-radius:999px;border:1px solid var(--line);background:var(--bg);font-size:12.5px}
+.sw i{display:flex;border-radius:50%;overflow:hidden;width:18px;height:18px;border:1px solid rgba(255,255,255,.18)}
+.sw i b{flex:1}
+.check{display:flex;align-items:center;gap:10px;font-size:14px;color:var(--text);font-weight:400;margin:0 0 9px;cursor:pointer}
+.check input{width:17px;height:17px;accent-color:var(--signal)}
+.side-foot{padding:14px 22px;border-top:1px solid var(--line);display:flex;align-items:center;gap:10px}
+.side-foot .btn.primary{flex:1}
+.status{font-size:13px;color:var(--mute);padding:0 22px 12px;min-height:32px}
+.status.ok{color:var(--ok)} .status.bad{color:#FF8A6B}
+.stage{display:flex;flex-direction:column;min-width:0;min-height:0}
+.stage-bar{display:flex;align-items:center;gap:10px;padding:12px 18px;border-bottom:1px solid var(--line);font:500 12px var(--mono);color:var(--mute)}
+.stage-bar .sp{margin-left:auto;display:flex;gap:6px}
+.stage-bar button{background:none;border:1px solid var(--line);border-radius:8px;padding:5px 10px;font:500 12px var(--mono);color:var(--mute)}
+.stage-bar button.on{color:var(--text);border-color:#55534a}
+.frame-wrap{flex:1;min-height:0;display:flex;justify-content:center;background:#0A0A08;padding:0}
+.frame-wrap.phone{padding:18px}
+iframe{border:0;width:100%;height:100%;background:#fff}
+.frame-wrap.phone iframe{width:390px;max-width:100%;border-radius:22px;border:1px solid var(--line)}
+@media (max-width:900px){
+  body{height:auto}
+  .app{grid-template-columns:1fr;height:auto}
+  .side{border-right:0}
+  .form{overflow:visible}
+  .side-foot{position:sticky;bottom:0;background:var(--panel)}
+  .stage{height:80vh;border-top:1px solid var(--line)}
+}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<main class="login" id="login">
+  <form class="login-card" id="loginForm" autocomplete="on">
+    <div class="keyhole" aria-hidden="true">🗝</div>
+    <h1>Control room</h1>
+    <p>Owner only. Enter your password to change the site.</p>
+    <label for="pw">Password</label>
+    <input type="password" id="pw" name="password" autocomplete="current-password" required autofocus>
+    <button class="btn primary" id="loginBtn" type="submit">Open the door</button>
+    <p class="err" id="loginErr" role="alert"></p>
+  </form>
+</main>
+
+<!-- EDITOR -->
+<div class="app" id="app" hidden>
+  <section class="side" aria-label="Site settings">
+    <div class="side-head"><span class="dot"></span><b>Control room</b>
+      <div class="sp"><a class="btn" href="/" target="_blank" rel="noopener">View site ↗</a><button class="btn" id="logout" type="button">Log out</button></div>
+    </div>
+    <form class="form" id="form" novalidate></form>
+    <div class="status" id="status" role="status"></div>
+    <div class="side-foot">
+      <button class="btn primary" id="save" type="button">Save and publish</button>
+      <button class="btn" id="reset" type="button" title="Put every setting back to the original design">Reset</button>
+    </div>
+  </section>
+  <section class="stage" aria-label="Live preview">
+    <div class="stage-bar"><span>LIVE PREVIEW · nothing is public until you save</span>
+      <div class="sp"><button type="button" id="vDesk" class="on">Desktop</button><button type="button" id="vPhone">Phone</button></div>
+    </div>
+    <div class="frame-wrap" id="frameWrap"><iframe id="frame" title="Preview of your site"></iframe></div>
+  </section>
+</div>
+
+<script>
+(() => {
+const D = window.SITE_DEFAULTS, SECTIONS = window.SITE_SECTIONS;
+const $ = s => document.querySelector(s);
+const TOKEN = 'door-token', CACHE = 'site-settings-v1';
+let state = { ...D }, saved = {}, frameReady = false;
+
+const PRESETS = [
+  ['Original', { accent: D.accent, paper: D.paper, ink: D.ink, night: D.night }],
+  ['Teal', { accent: '#0E8C8A', paper: '#F5EFE7', ink: '#14201F', night: '#0C1716' }],
+  ['Blue', { accent: '#2563EB', paper: '#F1F4F8', ink: '#0F172A', night: '#0B1220' }],
+  ['Forest', { accent: '#0F9D6B', paper: '#F1F0E8', ink: '#14201A', night: '#0C1512' }],
+  ['Dark', { accent: '#FF6A3D', paper: '#161613', ink: '#F0EDE4', night: '#0A0A09' }],
+];
+const COLOURS = [['accent', 'Accent', 'buttons, highlights'], ['paper', 'Background', 'page colour'], ['ink', 'Text', 'headings, body'], ['night', 'Dark sections', 'contact, footer']];
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const input = (k, label, o = {}) => `<div class="field"><label for="f_${k}">${label}</label>${o.area
+  ? `<textarea id="f_${k}" data-k="${k}" rows="${o.rows || 3}" maxlength="${o.max || 200}"></textarea>`
+  : `<input type="${o.type || 'text'}" id="f_${k}" data-k="${k}" maxlength="${o.max || 120}" placeholder="${esc(o.ph || '')}" ${o.mode ? `inputmode="${o.mode}"` : ''}>`}</div>`;
+
+$('#form').innerHTML = `
+  <div class="group"><h2>Name</h2><p class="hint">Shown in the top bar, the About photo and the footer.</p>
+    <div class="row2">${input('name', 'Your name', { max: 60 })}${input('initials', 'Logo letters', { max: 3 })}</div>
+    ${input('role', 'Title (footer)', { max: 60 })}
+  </div>
+  <div class="group"><h2>Colours</h2><p class="hint">Pick a ready-made set, or choose each colour yourself.</p>
+    <div class="presets">${PRESETS.map(([n, c], i) => `<button type="button" class="sw" data-preset="${i}"><i><b style="background:${c.paper}"></b><b style="background:${c.accent}"></b><b style="background:${c.night}"></b></i>${n}</button>`).join('')}</div>
+    <div class="colours">${COLOURS.map(([k, l, h]) => `<label class="colour"><input type="color" data-k="${k}" aria-label="${l} colour"><span>${l}<small data-hex="${k}"></small></span></label>`).join('')}</div>
+  </div>
+  <div class="group"><h2>First screen</h2><p class="hint">The big headline and the lines under it.</p>
+    ${input('heroTitle', 'Headline (press Enter for a new line)', { area: 1, rows: 2, max: 120 })}
+    ${input('heroSub', 'Orange line', { max: 140 })}
+    ${input('heroLede', 'Intro paragraph', { area: 1, rows: 5, max: 600 })}
+    ${input('heroFor', 'Who it is for', { max: 160 })}
+  </div>
+  <div class="group"><h2>Availability badge</h2><p class="hint">The small green-dot badge above the headline.</p>
+    <label class="check"><input type="checkbox" data-k="showAvail">Show the badge</label>
+    ${input('avail', 'Badge text', { max: 80 })}
+  </div>
+  <div class="group"><h2>Contact</h2><p class="hint">Every button and link on the site uses these.</p>
+    ${input('whatsapp', 'WhatsApp number (digits only, with country code)', { type: 'tel', max: 15, mode: 'numeric', ph: '2348110117004' })}
+    ${input('email', 'Email', { type: 'email', max: 120 })}
+    ${input('upwork', 'Upwork profile link', { type: 'url', max: 300 })}
+    ${input('booking', 'Booking link (leave empty to hide "Book a call")', { type: 'url', max: 300, ph: 'https://calendly.com/…' })}
+  </div>
+  <div class="group"><h2>Sections</h2><p class="hint">Untick a section to hide it from the site and the menu.</p>
+    ${Object.entries(SECTIONS).map(([id, l]) => `<label class="check"><input type="checkbox" data-sec="${id}">${l}</label>`).join('')}
+  </div>`;
+
+function fill() {
+  document.querySelectorAll('[data-k]').forEach(el => {
+    const v = state[el.dataset.k];
+    if (el.type === 'checkbox') el.checked = !!v; else el.value = v;
+  });
+  document.querySelectorAll('[data-sec]').forEach(el => el.checked = !state.hidden.includes(el.dataset.sec));
+  document.querySelectorAll('[data-hex]').forEach(el => el.textContent = state[el.dataset.hex]);
+}
+function push() { if (frameReady) $('#frame').contentWindow.postMessage({ type: 'site-preview', settings: state }, location.origin); }
+function status(msg, cls) { const s = $('#status'); s.textContent = msg; s.className = 'status ' + (cls || ''); }
+const dirty = () => JSON.stringify(diff(state)) !== JSON.stringify(saved);
+function diff(s) { const o = {}; for (const k in D) if (JSON.stringify(s[k]) !== JSON.stringify(D[k])) o[k] = s[k]; return o; }
+function changed() { push(); status(dirty() ? 'Unsaved changes. Visitors still see the old version.' : ''); }
+
+$('#form').addEventListener('input', e => {
+  const el = e.target;
+  if (el.dataset.k) {
+    let v = el.type === 'checkbox' ? el.checked : el.value;
+    if (el.type === 'color') v = v.toUpperCase();
+    if (el.dataset.k === 'whatsapp') v = v.replace(/\D/g, '');
+    state[el.dataset.k] = v;
+    document.querySelectorAll('[data-hex]').forEach(h => h.textContent = state[h.dataset.hex]);
+  } else if (el.dataset.sec) {
+    const set = new Set(state.hidden); el.checked ? set.delete(el.dataset.sec) : set.add(el.dataset.sec); state.hidden = [...set];
+  }
+  changed();
+});
+$('#form').addEventListener('click', e => {
+  const b = e.target.closest('[data-preset]'); if (!b) return;
+  Object.assign(state, PRESETS[+b.dataset.preset][1]); fill(); changed();
+});
+addEventListener('message', e => {
+  if (e.origin !== location.origin || e.source !== $('#frame').contentWindow || !e.data || e.data.type !== 'site-preview-ready') return;
+  frameReady = true; push();
+});
+$('#vDesk').onclick = () => { $('#frameWrap').classList.remove('phone'); $('#vDesk').classList.add('on'); $('#vPhone').classList.remove('on'); };
+$('#vPhone').onclick = () => { $('#frameWrap').classList.add('phone'); $('#vPhone').classList.add('on'); $('#vDesk').classList.remove('on'); };
+addEventListener('beforeunload', e => { if (!$('#app').hidden && dirty()) { e.preventDefault(); e.returnValue = ''; } });
+
+/* ---------- talking to the backend ---------- */
+const token = () => { try { const t = sessionStorage.getItem(TOKEN); return t && Number(t.split('.')[0]) > Date.now() ? t : null; } catch { return null; } };
+async function call(method, body) {
+  const r = await fetch('/api/settings', { method, headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + (token() || '') }, body: body ? JSON.stringify(body) : undefined });
+  const j = await r.json().catch(() => ({}));
+  if (r.status === 401) { showLogin('Your session ended. Log in again.'); throw new Error('auth'); }
+  if (!r.ok) throw new Error(j.error || 'Could not save.');
+  return j;
+}
+function remember(o) { saved = o; try { localStorage.setItem(CACHE, JSON.stringify(o)); } catch {} }
+
+$('#save').onclick = async () => {
+  $('#save').disabled = true; status('Saving…');
+  try { const j = await call('PUT', diff(state)); remember(j.settings); status('Saved. The live site now shows this version.', 'ok'); }
+  catch (e) { if (e.message !== 'auth') status(e.message, 'bad'); }
+  $('#save').disabled = false;
+};
+$('#reset').onclick = async () => {
+  if (!confirm('Put every setting back to the original design? This changes the live site.')) return;
+  status('Resetting…');
+  try { await call('DELETE'); remember({}); state = { ...D, hidden: [] }; fill(); push(); status('Back to the original design.', 'ok'); }
+  catch (e) { if (e.message !== 'auth') status(e.message, 'bad'); }
+};
+$('#logout').onclick = () => { try { sessionStorage.removeItem(TOKEN); } catch {} saved = diff(state); location.reload(); };
+
+function showLogin(msg) { $('#app').hidden = true; $('#login').hidden = false; $('#loginErr').textContent = msg || ''; $('#pw').value = ''; $('#pw').focus(); }
+async function showApp() {
+  $('#login').hidden = true; $('#app').hidden = false;
+  try {
+    const r = await fetch('/api/settings'); const o = r.ok ? await r.json() : {};
+    saved = o; state = { ...D, ...o, hidden: [...(o.hidden || [])] };
+  } catch { status('Could not load the saved settings.', 'bad'); }
+  fill();
+  if (!$('#frame').src) $('#frame').src = '/?preview=1'; else push();
+}
+$('#loginForm').onsubmit = async e => {
+  e.preventDefault(); $('#loginBtn').disabled = true; $('#loginErr').textContent = '';
+  try {
+    const r = await fetch('/api/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: $('#pw').value }) });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(j.error || 'The door is not available here. It only works on the deployed site.');
+    sessionStorage.setItem(TOKEN, j.token); await showApp();
+  } catch (err) { $('#loginErr').textContent = err.message; }
+  $('#loginBtn').disabled = false;
+};
+if (token()) showApp();
+})();
+</script>
+</body>
+</html>

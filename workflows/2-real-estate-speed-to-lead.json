@@ -1,0 +1,924 @@
+{
+  "name": "Real estate · Speed-to-lead responder",
+  "nodes": [
+    {
+      "id": "5h0wca5e-0004-4000-8000-000000000002",
+      "name": "New enquiry from the website",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.2,
+      "position": [
+        0,
+        -100
+      ],
+      "parameters": {
+        "formTitle": "Ask about a property",
+        "formDescription": "Tell us what you are looking for and an agent from Lakeshore Realty will text you back.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Name",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Email",
+              "fieldType": "email",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Mobile number",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "I am interested in",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Buying"
+                  },
+                  {
+                    "option": "Selling"
+                  },
+                  {
+                    "option": "Renting"
+                  }
+                ]
+              },
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Area or property",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Budget"
+            },
+            {
+              "fieldLabel": "When do you want to move?",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "As soon as possible"
+                  },
+                  {
+                    "option": "Within 3 months"
+                  },
+                  {
+                    "option": "3 to 6 months"
+                  },
+                  {
+                    "option": "Just looking"
+                  }
+                ]
+              },
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Anything else?",
+              "fieldType": "textarea"
+            }
+          ]
+        },
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "webhookId": "5h0wca5e-0004-4000-8000-000000000001"
+    },
+    {
+      "id": "5h0wca5e-0004-4000-8000-000000000004",
+      "name": "Missed call from the phone system",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        120
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "demo-missed-call",
+        "options": {}
+      },
+      "webhookId": "5h0wca5e-0004-4000-8000-000000000003"
+    },
+    {
+      "id": "5h0wca5e-0004-4000-8000-000000000005",
+      "name": "Tidy the lead",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const j = $input.first().json, b = j.body || null, t = v => String(v || '').trim();\n  const lead = b ? { name: t(b.callerName) || 'Unknown caller', email: '', phone: t(b.from), source: 'Missed call', interest: 'Unknown', area: '', budget: '', timeline: 'Unknown', message: '' }\n    : { name: t(j['Name']), email: t(j['Email']).toLowerCase(), phone: t(j['Mobile number']), source: 'Website form', interest: t(j['I am interested in']), area: t(j['Area or property']), budget: t(j['Budget']), timeline: t(j['When do you want to move?']), message: t(j['Anything else?']) };\n  return [{ json: { ...lead, receivedAt: Date.now(), received: new Date().toISOString().slice(0, 19).replace('T', ' ') } }];"
+      }
+    },
+    {
+      "id": "5h0wca5e-0004-4000-8000-000000000006",
+      "name": "Score the lead",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// The score is rules in code, so it is the same every time and the agent can see why.\n  const j = $json, why = []; let score = 20;\n  const add = (n, r) => { score += n; why.push(r); };\n  if (j.timeline === 'As soon as possible') add(35, 'wants to move now'); else if (j.timeline === 'Within 3 months') add(25, 'moving within 3 months'); else if (j.timeline === '3 to 6 months') add(10, '3 to 6 months out');\n  if (/\\d/.test(j.budget)) add(15, 'gave a budget');\n  if (j.interest === 'Selling') add(15, 'has a property to sell'); else if (j.interest === 'Buying') add(10, 'buyer');\n  if (j.area) add(5, 'named an area');\n  if (j.source === 'Missed call') add(30, 'called us directly');\n  score = Math.min(100, score);\n  return [{ json: { ...j, score, temperature: score >= 70 ? 'Hot' : score >= 45 ? 'Warm' : 'Cold', hot: score >= 70, why: why.join(', ') || 'little information yet' } }];"
+      }
+    },
+    {
+      "id": "5h0wca5e-0004-4000-8000-000000000007",
+      "name": "Build Claude request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const j = $json;\n  const prompt = `You write the first text message a real estate agency sends to a new lead. Agency: Lakeshore Realty. Agent: Maya.\nRules: under 320 characters, friendly and specific to what they asked, no emojis, no promises about price or availability, end with ONE easy question that moves things forward. If we only have a missed call, apologise for missing it and ask what they are looking for.\nReply with ONLY a JSON object: {\"sms\": \"...\"}\n\nLead: ${JSON.stringify({ name: j.name, source: j.source, interest: j.interest, area: j.area, budget: j.budget, timeline: j.timeline, message: j.message })}`;\n  return [{ json: { ...j, body: { model: 'claude-sonnet-5-5', max_tokens: 400, messages: [{ role: 'user', content: prompt }] } } }];"
+      }
+    },
+    {
+      "id": "5h0wca5e-0004-4000-8000-000000000008",
+      "name": "Claude: write the first reply",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        880,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "options": {
+          "timeout": 120000
+        },
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "anthropicApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.body) }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            }
+          ]
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000
+    },
+    {
+      "id": "5h0wca5e-0004-4000-8000-000000000009",
+      "name": "Check the reply",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const raw = ($json.content || []).filter(c => c.type === 'text').map(c => c.text).join('');\nlet ai = null;\nfor (let i = raw.indexOf('{'); i >= 0 && !ai; i = raw.indexOf('{', i + 1)) {\n  let depth = 0, inStr = false, esc = false;\n  for (let k = i; k < raw.length; k++) {\n    const ch = raw[k];\n    if (inStr) { if (esc) esc = false; else if (ch === '\\\\') esc = true; else if (ch === '\"') inStr = false; }\n    else if (ch === '\"') inStr = true;\n    else if (ch === '{') depth++;\n    else if (ch === '}' && --depth === 0) { try { ai = JSON.parse(raw.slice(i, k + 1)); } catch (e) {} break; }\n  }\n}\nif (!ai) throw new Error('Claude did not return JSON: ' + raw.slice(0, 200));\n  const lead = $('Score the lead').first().json;\n  let sms = String(ai.sms || '').trim();\n  if (!sms || sms.length > 480) sms = `Hi ${lead.name.split(' ')[0]}, this is Maya at Lakeshore Realty. Thanks for getting in touch. When is a good time for a quick call today?`;\n  return [{ json: { ...lead, sms, repliedIn: Math.max(1, Math.round((Date.now() - lead.receivedAt) / 1000)) } }];"
+      }
+    },
+    {
+      "id": "5h0wca5e-0004-4000-8000-000000000010",
+      "name": "Text the lead back",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1320,
+        0
+      ],
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "RUN-SETUP-FIRST"
+        },
+        "operation": "append",
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Outbox"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Time": "={{ $now.toFormat('yyyy-LL-dd HH:mm:ss') }}",
+            "Workflow": "Speed to lead",
+            "Ref": "",
+            "Channel": "SMS",
+            "To": "={{ $json.phone }}",
+            "Message": "={{ $json.sms }}",
+            "Status": "Queued (demo outbox)"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Time",
+              "displayName": "Time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Workflow",
+              "displayName": "Workflow",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Channel",
+              "displayName": "Channel",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "To",
+              "displayName": "To",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Message",
+              "displayName": "Message",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Ref",
+              "displayName": "Ref",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ]
+        },
+        "options": {
+          "cellFormat": "RAW"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000
+    },
+    {
+      "id": "5h0wca5e-0004-4000-8000-000000000011",
+      "name": "Save to the CRM",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1540,
+        0
+      ],
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "RUN-SETUP-FIRST"
+        },
+        "operation": "append",
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "RE Leads"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Received": "={{ $('Check the reply').first().json.received }}",
+            "Name": "={{ $('Check the reply').first().json.name }}",
+            "Email": "={{ $('Check the reply').first().json.email }}",
+            "Phone": "={{ $('Check the reply').first().json.phone }}",
+            "Source": "={{ $('Check the reply').first().json.source }}",
+            "Interest": "={{ $('Check the reply').first().json.interest }}",
+            "Area": "={{ $('Check the reply').first().json.area }}",
+            "Budget": "={{ $('Check the reply').first().json.budget }}",
+            "Timeline": "={{ $('Check the reply').first().json.timeline }}",
+            "Score": "={{ $('Check the reply').first().json.score }}",
+            "Temperature": "={{ $('Check the reply').first().json.temperature }}",
+            "Why": "={{ $('Check the reply').first().json.why }}",
+            "First reply": "={{ $('Check the reply').first().json.sms }}",
+            "Replied in (seconds)": "={{ $('Check the reply').first().json.repliedIn }}",
+            "Next step": "={{ $('Check the reply').first().json.hot ? 'Agent to call now' : 'Follow-up in 2 days' }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Received",
+              "displayName": "Received",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Phone",
+              "displayName": "Phone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Source",
+              "displayName": "Source",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Interest",
+              "displayName": "Interest",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Area",
+              "displayName": "Area",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Budget",
+              "displayName": "Budget",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Timeline",
+              "displayName": "Timeline",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Score",
+              "displayName": "Score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Temperature",
+              "displayName": "Temperature",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Why",
+              "displayName": "Why",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "First reply",
+              "displayName": "First reply",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Replied in (seconds)",
+              "displayName": "Replied in (seconds)",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Next step",
+              "displayName": "Next step",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ]
+        },
+        "options": {
+          "cellFormat": "RAW"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000
+    },
+    {
+      "id": "5h0wca5e-0004-4000-8000-000000000013",
+      "name": "Hot lead?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1760,
+        0
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "5h0wca5e-0004-4000-8000-000000000012",
+              "leftValue": "={{ $('Check the reply').first().json.hot }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "5h0wca5e-0004-4000-8000-000000000014",
+      "name": "Next viewing slots",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1980,
+        -140
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const lead = $('Check the reply').first().json, slots = [], d = new Date();\n  while (slots.length < 3) { d.setDate(d.getDate() + 1); if (d.getDay() % 6) slots.push(d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) + (slots.length % 2 ? ' 4:00 pm' : ' 10:30 am')); }\n  return [{ json: { ...lead, alert: `HOT LEAD (${lead.score}/100): ${lead.name}, ${lead.phone}. ${lead.interest}${lead.area ? ' in ' + lead.area : ''}${lead.budget ? ', budget ' + lead.budget : ''}. Why: ${lead.why}. Already texted back in ${lead.repliedIn}s. Open slots to offer: ${slots.join(' / ')}.` } }];"
+      }
+    },
+    {
+      "id": "5h0wca5e-0004-4000-8000-000000000015",
+      "name": "Alert the agent now",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        2200,
+        -140
+      ],
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "RUN-SETUP-FIRST"
+        },
+        "operation": "append",
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Outbox"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Time": "={{ $now.toFormat('yyyy-LL-dd HH:mm:ss') }}",
+            "Workflow": "Speed to lead",
+            "Ref": "",
+            "Channel": "Agent alert",
+            "To": "Maya (agent on duty)",
+            "Message": "={{ $json.alert }}",
+            "Status": "Queued (demo outbox)"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Time",
+              "displayName": "Time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Workflow",
+              "displayName": "Workflow",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Channel",
+              "displayName": "Channel",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "To",
+              "displayName": "To",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Message",
+              "displayName": "Message",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Ref",
+              "displayName": "Ref",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ]
+        },
+        "options": {
+          "cellFormat": "RAW"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000
+    },
+    {
+      "id": "5h0wca5e-0004-4000-8000-000000000016",
+      "name": "Schedule a follow-up",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1980,
+        140
+      ],
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "RUN-SETUP-FIRST"
+        },
+        "operation": "append",
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Outbox"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Time": "={{ $now.toFormat('yyyy-LL-dd HH:mm:ss') }}",
+            "Workflow": "Speed to lead",
+            "Ref": "",
+            "Channel": "SMS (scheduled)",
+            "To": "={{ $('Check the reply').first().json.phone }}",
+            "Message": "={{ 'Follow-up to ' + $('Check the reply').first().json.name + ' in 2 days if there is no reply.' }}",
+            "Status": "={{ 'Scheduled for ' + $now.plus({ days: 2 }).toFormat('ccc d LLL, HH:mm') }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Time",
+              "displayName": "Time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Workflow",
+              "displayName": "Workflow",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Channel",
+              "displayName": "Channel",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "To",
+              "displayName": "To",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Message",
+              "displayName": "Message",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Ref",
+              "displayName": "Ref",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ]
+        },
+        "options": {
+          "cellFormat": "RAW"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000
+    }
+  ],
+  "connections": {
+    "New enquiry from the website": {
+      "main": [
+        [
+          {
+            "node": "Tidy the lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Missed call from the phone system": {
+      "main": [
+        [
+          {
+            "node": "Tidy the lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tidy the lead": {
+      "main": [
+        [
+          {
+            "node": "Score the lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Score the lead": {
+      "main": [
+        [
+          {
+            "node": "Build Claude request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Claude request": {
+      "main": [
+        [
+          {
+            "node": "Claude: write the first reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude: write the first reply": {
+      "main": [
+        [
+          {
+            "node": "Check the reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check the reply": {
+      "main": [
+        [
+          {
+            "node": "Text the lead back",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Text the lead back": {
+      "main": [
+        [
+          {
+            "node": "Save to the CRM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save to the CRM": {
+      "main": [
+        [
+          {
+            "node": "Hot lead?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Hot lead?": {
+      "main": [
+        [
+          {
+            "node": "Next viewing slots",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Schedule a follow-up",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Next viewing slots": {
+      "main": [
+        [
+          {
+            "node": "Alert the agent now",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveManualExecutions": true
+  }
+}

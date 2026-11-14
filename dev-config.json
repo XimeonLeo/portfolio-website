@@ -1,0 +1,4 @@
+{
+  "_note": "LOCAL PREVIEW ONLY. This test password works on your own computer and nowhere else. The real password is the ADMIN_PASSWORD variable you set on Netlify.",
+  "ADMIN_PASSWORD": "local-door-test-4471"
+}

@@ -1,0 +1,805 @@
+{
+  "name": "CRM automation · Pipeline follow-up",
+  "nodes": [
+    {
+      "id": "5h0wca5e-0012-4000-8000-000000000001",
+      "name": "Every weekday at 8:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        -100
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 8 * * 1-5"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "5h0wca5e-0012-4000-8000-000000000002",
+      "name": "Run now",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        120
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "5h0wca5e-0012-4000-8000-000000000003",
+      "name": "Load the pipeline",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        220,
+        0
+      ],
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "RUN-SETUP-FIRST"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Pipeline"
+        },
+        "options": {}
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000
+    },
+    {
+      "id": "5h0wca5e-0012-4000-8000-000000000004",
+      "name": "What does each deal need?",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Plain rules per stage. The same deal always gets the same answer, and the owner can read why.\n  const today = new Date(); today.setHours(0, 0, 0, 0);\n  const due = n => { const t = new Date(today); t.setDate(t.getDate() + n); return t.toISOString().slice(0, 10); };\n  const out = [];\n  for (const d of $input.all().map(i => i.json)) {\n    if (!d['Deal ID']) continue;\n    const idle = Math.round((today - new Date(d['Last touch'])) / 864e5), stage = d.Stage;\n    let health = 'On track', next = 'No action needed today', tasks = [], draft = false;\n    const T = (task, days, why) => tasks.push({ task, due: due(days), why });\n    if (stage === 'New lead' && idle >= 1) { health = 'At risk'; next = 'Call today: new lead untouched for ' + idle + ' day(s)'; T('Call ' + d.Contact + ' today', 0, 'New lead, no contact for ' + idle + ' day(s)'); }\n    else if (stage === 'New lead') { next = 'First call today'; T('First call to ' + d.Contact, 0, 'New lead came in today'); }\n    else if (stage === 'Proposal sent' && idle >= 3) { health = 'Needs follow-up'; next = 'Follow up on the proposal (' + idle + ' days quiet)'; draft = true; T('Send the follow-up to ' + d.Contact, 0, 'Proposal sent ' + idle + ' days ago, no reply'); }\n    else if (stage === 'Negotiation' && idle >= 5) { health = 'At risk'; next = 'Check in: negotiation quiet for ' + idle + ' days'; draft = true; T('Check in with ' + d.Contact, 0, 'Negotiation stalled for ' + idle + ' days'); }\n    else if (stage === 'Won') { next = 'Start onboarding'; T('Send the welcome pack to ' + d.Contact, 0, 'Deal won'); T('Book the kickoff call with ' + d.Company, 2, 'Deal won'); T('Set up the shared folder for ' + d.Company, 2, 'Deal won'); }\n    else if (stage === 'Lost') { health = 'Closed'; next = 'Nurture: check back in 60 days'; T('Check back in with ' + d.Contact, 60, 'Lost deal, nurture'); }\n    else if (stage === 'Qualified' && idle >= 3) { health = 'Needs follow-up'; next = 'Send the proposal'; T('Send the proposal to ' + d.Contact, 1, 'Qualified ' + idle + ' days ago, no proposal yet'); }\n    out.push({ json: { id: d['Deal ID'], contact: d.Contact, company: d.Company, stage, value: Number(d.Value) || 0, owner: d.Owner, idle, health, next, tasks, draft } });\n  }\n  return out;"
+      }
+    },
+    {
+      "id": "5h0wca5e-0012-4000-8000-000000000005",
+      "name": "Update health and next step",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        660,
+        -260
+      ],
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "RUN-SETUP-FIRST"
+        },
+        "operation": "update",
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Pipeline"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Deal ID": "={{ $json.id }}",
+            "Next step": "={{ $json.next }}",
+            "Health": "={{ $json.health }}"
+          },
+          "matchingColumns": [
+            "Deal ID"
+          ],
+          "schema": [
+            {
+              "id": "Deal ID",
+              "displayName": "Deal ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Contact",
+              "displayName": "Contact",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Company",
+              "displayName": "Company",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Stage",
+              "displayName": "Stage",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Value",
+              "displayName": "Value",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Owner",
+              "displayName": "Owner",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Last touch",
+              "displayName": "Last touch",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Next step",
+              "displayName": "Next step",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Health",
+              "displayName": "Health",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ]
+        },
+        "options": {}
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000
+    },
+    {
+      "id": "5h0wca5e-0012-4000-8000-000000000006",
+      "name": "List the tasks",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        -80
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const now = new Date().toISOString().slice(0, 16).replace('T', ' ');\n  return $input.all().flatMap(i => i.json.tasks.map(t => ({ json: { created: now, id: i.json.id, owner: i.json.owner, task: t.task, due: t.due, why: t.why } })));"
+      }
+    },
+    {
+      "id": "5h0wca5e-0012-4000-8000-000000000007",
+      "name": "Create the tasks",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        880,
+        -80
+      ],
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "RUN-SETUP-FIRST"
+        },
+        "operation": "append",
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Tasks"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Created": "={{ $json.created }}",
+            "Deal ID": "={{ $json.id }}",
+            "Owner": "={{ $json.owner }}",
+            "Task": "={{ $json.task }}",
+            "Due": "={{ $json.due }}",
+            "Why": "={{ $json.why }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Created",
+              "displayName": "Created",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Deal ID",
+              "displayName": "Deal ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Owner",
+              "displayName": "Owner",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Task",
+              "displayName": "Task",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Due",
+              "displayName": "Due",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Why",
+              "displayName": "Why",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ]
+        },
+        "options": {
+          "cellFormat": "RAW"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000
+    },
+    {
+      "id": "5h0wca5e-0012-4000-8000-000000000009",
+      "name": "Needs a written follow-up?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        660,
+        120
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "5h0wca5e-0012-4000-8000-000000000008",
+              "leftValue": "={{ $json.draft }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "5h0wca5e-0012-4000-8000-000000000010",
+      "name": "Build Claude request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        120
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const j = $json;\n  const prompt = `Write a short follow-up email from ${j.owner} at Northbeam Studio to ${j.contact} at ${j.company}.\nSituation: the deal is at the \"${j.stage}\" stage and there has been no contact for ${j.idle} days.\nRules: under 90 words, friendly, no pressure, no discounts or prices, one clear question at the end. Plain text.\nReply with ONLY a JSON object: {\"subject\": \"\", \"body\": \"\"}`;\n  return { json: { ...j, body: { model: 'claude-sonnet-5-5', max_tokens: 400, messages: [{ role: 'user', content: prompt }] } } };"
+      }
+    },
+    {
+      "id": "5h0wca5e-0012-4000-8000-000000000011",
+      "name": "Claude: draft the follow-up",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1100,
+        120
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "options": {
+          "timeout": 120000
+        },
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "anthropicApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.body) }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            }
+          ]
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000
+    },
+    {
+      "id": "5h0wca5e-0012-4000-8000-000000000012",
+      "name": "Check the draft",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1320,
+        120
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const raw = ($json.content || []).filter(c => c.type === 'text').map(c => c.text).join('');\nlet ai = null;\nfor (let i = raw.indexOf('{'); i >= 0 && !ai; i = raw.indexOf('{', i + 1)) {\n  let depth = 0, inStr = false, esc = false;\n  for (let k = i; k < raw.length; k++) {\n    const ch = raw[k];\n    if (inStr) { if (esc) esc = false; else if (ch === '\\\\') esc = true; else if (ch === '\"') inStr = false; }\n    else if (ch === '\"') inStr = true;\n    else if (ch === '{') depth++;\n    else if (ch === '}' && --depth === 0) { try { ai = JSON.parse(raw.slice(i, k + 1)); } catch (e) {} break; }\n  }\n}\nif (!ai) throw new Error('Claude did not return JSON: ' + raw.slice(0, 200));\n  const d = $('Build Claude request').item.json;\n  let body = String(ai.body || '').trim();\n  if (!body || /[$£€]\\s?\\d|discount/i.test(body)) body = `Hi ${d.contact.split(' ')[0]}, I wanted to check in on where things stand. Is there anything you need from me to move forward?`;\n  return { json: { id: d.id, contact: d.contact, text: 'Subject: ' + String(ai.subject || 'Checking in').slice(0, 90) + '\\n\\n' + body.slice(0, 900) } };"
+      }
+    },
+    {
+      "id": "5h0wca5e-0012-4000-8000-000000000013",
+      "name": "Save as a draft for the owner",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1540,
+        120
+      ],
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "RUN-SETUP-FIRST"
+        },
+        "operation": "append",
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Outbox"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Time": "={{ $now.toFormat('yyyy-LL-dd HH:mm:ss') }}",
+            "Workflow": "CRM automation",
+            "Ref": "={{ $json.id }}",
+            "Channel": "Email draft",
+            "To": "={{ $json.contact }}",
+            "Message": "={{ $json.text }}",
+            "Status": "Draft: waiting for the owner to send"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Time",
+              "displayName": "Time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Workflow",
+              "displayName": "Workflow",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Channel",
+              "displayName": "Channel",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "To",
+              "displayName": "To",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Message",
+              "displayName": "Message",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Ref",
+              "displayName": "Ref",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ]
+        },
+        "options": {
+          "cellFormat": "RAW"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000
+    },
+    {
+      "id": "5h0wca5e-0012-4000-8000-000000000014",
+      "name": "Morning summary",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        340
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const d = $input.all().map(i => i.json), open = d.filter(x => !['Won', 'Lost'].includes(x.stage));\n  const sum = a => a.reduce((s, x) => s + x.value, 0).toLocaleString('en-US');\n  const risk = d.filter(x => x.health === 'At risk'), fu = d.filter(x => x.health === 'Needs follow-up');\n  return [{ json: { text: `Pipeline this morning: ${open.length} open deals worth $${sum(open)}. At risk: ${risk.map(x => x.company + ' (' + x.idle + ' days quiet)').join(', ') || 'none'}. Needs follow-up: ${fu.map(x => x.company).join(', ') || 'none'}. Won: ${d.filter(x => x.stage === 'Won').map(x => x.company).join(', ') || 'none'}. ${d.reduce((s, x) => s + x.tasks.length, 0)} tasks created.` } }];"
+      }
+    },
+    {
+      "id": "5h0wca5e-0012-4000-8000-000000000015",
+      "name": "Send the summary",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        880,
+        340
+      ],
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "RUN-SETUP-FIRST"
+        },
+        "operation": "append",
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Outbox"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Time": "={{ $now.toFormat('yyyy-LL-dd HH:mm:ss') }}",
+            "Workflow": "CRM automation",
+            "Ref": "",
+            "Channel": "Email",
+            "To": "Owner",
+            "Message": "={{ $json.text }}",
+            "Status": "Queued (demo outbox)"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Time",
+              "displayName": "Time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Workflow",
+              "displayName": "Workflow",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Channel",
+              "displayName": "Channel",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "To",
+              "displayName": "To",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Message",
+              "displayName": "Message",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Ref",
+              "displayName": "Ref",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ]
+        },
+        "options": {
+          "cellFormat": "RAW"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000
+    }
+  ],
+  "connections": {
+    "Every weekday at 8:00": {
+      "main": [
+        [
+          {
+            "node": "Load the pipeline",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Run now": {
+      "main": [
+        [
+          {
+            "node": "Load the pipeline",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load the pipeline": {
+      "main": [
+        [
+          {
+            "node": "What does each deal need?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "What does each deal need?": {
+      "main": [
+        [
+          {
+            "node": "Update health and next step",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "List the tasks",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Needs a written follow-up?",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Morning summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "List the tasks": {
+      "main": [
+        [
+          {
+            "node": "Create the tasks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Needs a written follow-up?": {
+      "main": [
+        [
+          {
+            "node": "Build Claude request",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Build Claude request": {
+      "main": [
+        [
+          {
+            "node": "Claude: draft the follow-up",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude: draft the follow-up": {
+      "main": [
+        [
+          {
+            "node": "Check the draft",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check the draft": {
+      "main": [
+        [
+          {
+            "node": "Save as a draft for the owner",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Morning summary": {
+      "main": [
+        [
+          {
+            "node": "Send the summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveManualExecutions": true
+  }
+}

@@ -1,0 +1,86 @@
+{
+  "name": "Portfolio demo · 0 Drop a sample file",
+  "nodes": [
+    {
+      "id": "5h0wca5e-0002-4000-8000-000000000001",
+      "name": "Drop a file",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "5h0wca5e-0002-4000-8000-000000000002",
+      "name": "Which file?",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// change PICK to: transcript | invoice1 | invoice2 | invoice3\n  const PICK = 'transcript';\n  const all = {\"transcript\":{\"name\":\"Discovery call - Marcus Hale.txt\",\"folder\":\"RUN-SETUP-FIRST\"},\"invoice1\":{\"name\":\"Northgate Medical Supply NMS-20418.pdf\",\"folder\":\"RUN-SETUP-FIRST\"},\"invoice2\":{\"name\":\"Cascade Office Cleaning COC-1187.pdf\",\"folder\":\"RUN-SETUP-FIRST\"},\"invoice3\":{\"name\":\"Northgate invoice (resent).pdf\",\"folder\":\"RUN-SETUP-FIRST\"}};\n  return [{ json: all[PICK] }];"
+      }
+    },
+    {
+      "id": "5h0wca5e-0002-4000-8000-000000000003",
+      "name": "Copy into the inbox",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        440,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ 'https://www.googleapis.com/drive/v3/files/' + $json.id + '/copy' }}",
+        "options": {
+          "timeout": 120000
+        },
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleDriveOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ name: $json.name, parents: [$json.folder] }) }}"
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000
+    }
+  ],
+  "connections": {
+    "Drop a file": {
+      "main": [
+        [
+          {
+            "node": "Which file?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Which file?": {
+      "main": [
+        [
+          {
+            "node": "Copy into the inbox",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveManualExecutions": true
+  }
+}

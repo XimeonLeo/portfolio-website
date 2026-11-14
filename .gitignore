@@ -1,0 +1,8 @@
+.local/
+node_modules/
+.netlify/
+*.local.json
+showcase-workflows/out/
+showcase-workflows/out-clean/
+showcase-workflows/rec/*.mkv
+covers/tmp/

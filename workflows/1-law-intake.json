@@ -1,0 +1,1312 @@
+{
+  "name": "Law office · New-client intake to engagement letter",
+  "nodes": [
+    {
+      "id": "5h0wca5e-0003-4000-8000-000000000002",
+      "name": "New client intake form",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.2,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "formTitle": "New client enquiry",
+        "formDescription": "Tell us about your matter. Hartwell & Reed LLP will review it and reply within one business day.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Full name",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Email",
+              "fieldType": "email",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Phone"
+            },
+            {
+              "fieldLabel": "Type of matter",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Buying a property"
+                  },
+                  {
+                    "option": "Selling a property"
+                  },
+                  {
+                    "option": "Estate planning"
+                  },
+                  {
+                    "option": "Landlord and tenant"
+                  },
+                  {
+                    "option": "Something else"
+                  }
+                ]
+              },
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Other party's name (if any)"
+            },
+            {
+              "fieldLabel": "What do you need help with?",
+              "fieldType": "textarea",
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "webhookId": "5h0wca5e-0003-4000-8000-000000000001"
+    },
+    {
+      "id": "5h0wca5e-0003-4000-8000-000000000003",
+      "name": "Tidy the answers",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const j = $input.first().json, t = v => String(v || '').trim().replace(/\\s+/g, ' ');\n  return [{ json: { name: t(j['Full name']), email: t(j['Email']).toLowerCase(), phone: t(j['Phone']), matter: t(j['Type of matter']), otherParty: t(j[\"Other party's name (if any)\"]), details: String(j['What do you need help with?'] || '').trim(), received: new Date().toISOString() } }];"
+      }
+    },
+    {
+      "id": "5h0wca5e-0003-4000-8000-000000000004",
+      "name": "Load client list",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        440,
+        0
+      ],
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "RUN-SETUP-FIRST"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Law Clients"
+        },
+        "options": {}
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000,
+      "alwaysOutputData": true
+    },
+    {
+      "id": "5h0wca5e-0003-4000-8000-000000000005",
+      "name": "Conflict check",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Exact rule, done in code (not by AI): does the new client or the other party match anyone we already act for or against?\n  const intake = $('Tidy the answers').first().json;\n  const norm = s => String(s || '').toLowerCase().replace(/\\b(llc|llp|inc|ltd|co|corp|group|the)\\b|[^a-z0-9 ]/g, ' ').split(/\\s+/).filter(Boolean);\n  const same = (a, b) => { const A = norm(a), B = norm(b); if (!A.length || !B.length) return false; const hit = A.filter(w => B.includes(w)).length; return hit >= Math.min(2, Math.min(A.length, B.length)) && hit / Math.min(A.length, B.length) >= 0.99; };\n  const hits = [];\n  for (const row of $input.all().map(i => i.json)) {\n    if (same(intake.otherParty, row.Name) && row.Role === 'Client') hits.push(`The other party, ${intake.otherParty}, is an existing client (${row.Matter}).`);\n    if (same(intake.name, row.Name) && row.Role === 'Opposing party') hits.push(`${intake.name} is the opposing party in an open matter (${row.Matter}).`);\n  }\n  return [{ json: { ...intake, conflict: hits.length > 0, conflictNote: hits.join(' ') || 'Clear: no match in the client list.' } }];"
+      }
+    },
+    {
+      "id": "5h0wca5e-0003-4000-8000-000000000006",
+      "name": "Build Claude request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const j = $json;\n  const prompt = `You help a small law office triage new-client enquiries. Read the enquiry and reply with ONLY a JSON object:\n{\"summary\": \"2 sentences, plain English, no legal advice\", \"practiceArea\": one of [\"Real estate\", \"Estate planning\", \"Landlord-tenant\", \"Other\"], \"urgency\": one of [\"Low\", \"Normal\", \"High\"], \"scope\": \"one sentence describing the work the firm would do, starting with a verb\"}\nUrgency is High only if a deadline within 14 days is mentioned.\n\nMatter type chosen: ${j.matter}\nOther party: ${j.otherParty || 'none given'}\nEnquiry: ${j.details}`;\n  return [{ json: { ...j, body: { model: 'claude-sonnet-5-5', max_tokens: 600, messages: [{ role: 'user', content: prompt }] } } }];"
+      }
+    },
+    {
+      "id": "5h0wca5e-0003-4000-8000-000000000007",
+      "name": "Claude: summarise and classify",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1100,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "options": {
+          "timeout": 120000
+        },
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "anthropicApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.body) }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            }
+          ]
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000
+    },
+    {
+      "id": "5h0wca5e-0003-4000-8000-000000000008",
+      "name": "Check Claude's answer",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1320,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const raw = ($json.content || []).filter(c => c.type === 'text').map(c => c.text).join('');\nlet ai = null;\nfor (let i = raw.indexOf('{'); i >= 0 && !ai; i = raw.indexOf('{', i + 1)) {\n  let depth = 0, inStr = false, esc = false;\n  for (let k = i; k < raw.length; k++) {\n    const ch = raw[k];\n    if (inStr) { if (esc) esc = false; else if (ch === '\\\\') esc = true; else if (ch === '\"') inStr = false; }\n    else if (ch === '\"') inStr = true;\n    else if (ch === '{') depth++;\n    else if (ch === '}' && --depth === 0) { try { ai = JSON.parse(raw.slice(i, k + 1)); } catch (e) {} break; }\n  }\n}\nif (!ai) throw new Error('Claude did not return JSON: ' + raw.slice(0, 200));\n  const intake = $('Conflict check').first().json;\n  const pick = (v, list, d) => (list.includes(v) ? v : d);\n  return [{ json: { ...intake, summary: String(ai.summary || '').slice(0, 600), practiceArea: pick(ai.practiceArea, ['Real estate', 'Estate planning', 'Landlord-tenant', 'Other'], 'Other'), urgency: pick(ai.urgency, ['Low', 'Normal', 'High'], 'Normal'), scope: String(ai.scope || 'Advise on the matter described in your enquiry').slice(0, 300) } }];"
+      }
+    },
+    {
+      "id": "5h0wca5e-0003-4000-8000-000000000010",
+      "name": "Conflict found?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1540,
+        0
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "5h0wca5e-0003-4000-8000-000000000009",
+              "leftValue": "={{ $json.conflict }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "5h0wca5e-0003-4000-8000-000000000011",
+      "name": "Put on hold for the attorney",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1760,
+        -180
+      ],
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "RUN-SETUP-FIRST"
+        },
+        "operation": "append",
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Law Intake"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Received": "={{ $('Check Claude\\'s answer').first().json.received.slice(0, 16).replace('T', ' ') }}",
+            "Client": "={{ $('Check Claude\\'s answer').first().json.name }}",
+            "Email": "={{ $('Check Claude\\'s answer').first().json.email }}",
+            "Phone": "={{ $('Check Claude\\'s answer').first().json.phone }}",
+            "Matter type": "={{ $('Check Claude\\'s answer').first().json.matter }}",
+            "Practice area": "={{ $('Check Claude\\'s answer').first().json.practiceArea }}",
+            "Urgency": "={{ $('Check Claude\\'s answer').first().json.urgency }}",
+            "Other party": "={{ $('Check Claude\\'s answer').first().json.otherParty }}",
+            "Summary": "={{ $('Check Claude\\'s answer').first().json.summary }}",
+            "Conflict check": "={{ $('Check Claude\\'s answer').first().json.conflictNote }}",
+            "Engagement letter": "",
+            "Status": "On hold: possible conflict"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Received",
+              "displayName": "Received",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Client",
+              "displayName": "Client",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Phone",
+              "displayName": "Phone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Matter type",
+              "displayName": "Matter type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Practice area",
+              "displayName": "Practice area",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Urgency",
+              "displayName": "Urgency",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Other party",
+              "displayName": "Other party",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Summary",
+              "displayName": "Summary",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Conflict check",
+              "displayName": "Conflict check",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Engagement letter",
+              "displayName": "Engagement letter",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ]
+        },
+        "options": {
+          "cellFormat": "RAW"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000
+    },
+    {
+      "id": "5h0wca5e-0003-4000-8000-000000000012",
+      "name": "Alert the attorney",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1980,
+        -180
+      ],
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "RUN-SETUP-FIRST"
+        },
+        "operation": "append",
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Outbox"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Time": "={{ $now.toFormat('yyyy-LL-dd HH:mm:ss') }}",
+            "Workflow": "Law intake",
+            "Ref": "",
+            "Channel": "Email",
+            "To": "Managing attorney",
+            "Message": "={{ 'Possible conflict on a new enquiry from ' + $('Check Claude\\'s answer').first().json.name + '. ' + $('Check Claude\\'s answer').first().json.conflictNote + ' Nothing has been sent to the enquirer.' }}",
+            "Status": "Queued (demo outbox)"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Time",
+              "displayName": "Time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Workflow",
+              "displayName": "Workflow",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Channel",
+              "displayName": "Channel",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "To",
+              "displayName": "To",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Message",
+              "displayName": "Message",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Ref",
+              "displayName": "Ref",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ]
+        },
+        "options": {
+          "cellFormat": "RAW"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000
+    },
+    {
+      "id": "5h0wca5e-0003-4000-8000-000000000013",
+      "name": "Draft the letter",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1760,
+        120
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const j = $json, today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });\n  const title = 'ENGAGEMENT LETTER';\n  const text = `${title}\\n\\nHartwell & Reed LLP\\n${today}\\n\\n${j.name}\\n${j.email}\\n\\nDear ${j.name.split(' ')[0]},\\n\\nThank you for contacting Hartwell & Reed LLP. This letter confirms the terms on which we will act for you.\\n\\n1. Scope of work\\nWe will: ${j.scope.replace(/\\.$/, '')}. Matter type: ${j.matter} (${j.practiceArea}).\\n\\n2. Who will handle your matter\\nYour matter will be handled by the attorney named in the signature below, supported by our paralegal team.\\n\\n3. Fees\\nOur fees are set out in the attached fee schedule, which forms part of this letter. We will tell you before doing any work outside the scope above.\\n\\n4. Conflicts\\nWe have checked our records and found no conflict of interest in acting for you${j.otherParty ? ' in a matter involving ' + j.otherParty : ''}.\\n\\n5. Next step\\nPlease sign and return this letter. We will start work once we receive it.\\n\\nYours sincerely,\\n\\n______________________\\nAttorney, Hartwell & Reed LLP\\n\\nAccepted by: ______________________   Date: ____________\\n`;\n  const requests = [{ insertText: { location: { index: 1 }, text } }, { updateParagraphStyle: { range: { startIndex: 1, endIndex: 1 + title.length }, paragraphStyle: { namedStyleType: 'TITLE' }, fields: 'namedStyleType' } }];\n  return [{ json: { ...j, docTitle: `Engagement letter - ${j.name}`, requests } }];"
+      }
+    },
+    {
+      "id": "5h0wca5e-0003-4000-8000-000000000014",
+      "name": "Create the letter",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1980,
+        120
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://docs.googleapis.com/v1/documents",
+        "options": {
+          "timeout": 120000
+        },
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleDocsOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ title: $json.docTitle }) }}"
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000
+    },
+    {
+      "id": "5h0wca5e-0003-4000-8000-000000000015",
+      "name": "Write the letter",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2200,
+        120
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ 'https://docs.googleapis.com/v1/documents/' + $json.documentId + ':batchUpdate' }}",
+        "options": {
+          "timeout": 120000
+        },
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleDocsOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ requests: $('Draft the letter').first().json.requests }) }}"
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000
+    },
+    {
+      "id": "5h0wca5e-0003-4000-8000-000000000016",
+      "name": "File it in the letters folder",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2420,
+        120
+      ],
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{ 'https://www.googleapis.com/drive/v3/files/' + $('Create the letter').first().json.documentId + '?addParents=RUN-SETUP-FIRST&removeParents=root' }}",
+        "options": {
+          "timeout": 120000
+        },
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleDriveOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({}) }}"
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000
+    },
+    {
+      "id": "5h0wca5e-0003-4000-8000-000000000017",
+      "name": "Add to intake sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        2640,
+        120
+      ],
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "RUN-SETUP-FIRST"
+        },
+        "operation": "append",
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Law Intake"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Received": "={{ $('Check Claude\\'s answer').first().json.received.slice(0, 16).replace('T', ' ') }}",
+            "Client": "={{ $('Check Claude\\'s answer').first().json.name }}",
+            "Email": "={{ $('Check Claude\\'s answer').first().json.email }}",
+            "Phone": "={{ $('Check Claude\\'s answer').first().json.phone }}",
+            "Matter type": "={{ $('Check Claude\\'s answer').first().json.matter }}",
+            "Practice area": "={{ $('Check Claude\\'s answer').first().json.practiceArea }}",
+            "Urgency": "={{ $('Check Claude\\'s answer').first().json.urgency }}",
+            "Other party": "={{ $('Check Claude\\'s answer').first().json.otherParty }}",
+            "Summary": "={{ $('Check Claude\\'s answer').first().json.summary }}",
+            "Conflict check": "={{ $('Check Claude\\'s answer').first().json.conflictNote }}",
+            "Engagement letter": "={{ 'https://docs.google.com/document/d/' + $('Create the letter').first().json.documentId + '/edit' }}",
+            "Status": "Awaiting attorney approval"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Received",
+              "displayName": "Received",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Client",
+              "displayName": "Client",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Phone",
+              "displayName": "Phone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Matter type",
+              "displayName": "Matter type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Practice area",
+              "displayName": "Practice area",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Urgency",
+              "displayName": "Urgency",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Other party",
+              "displayName": "Other party",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Summary",
+              "displayName": "Summary",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Conflict check",
+              "displayName": "Conflict check",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Engagement letter",
+              "displayName": "Engagement letter",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ]
+        },
+        "options": {
+          "cellFormat": "RAW"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000
+    },
+    {
+      "id": "5h0wca5e-0003-4000-8000-000000000018",
+      "name": "Attorney changes the status",
+      "type": "n8n-nodes-base.googleSheetsTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        460
+      ],
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "RUN-SETUP-FIRST"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Law Intake"
+        },
+        "event": "rowUpdate",
+        "options": {
+          "columnsToWatch": [
+            "Status"
+          ]
+        }
+      }
+    },
+    {
+      "id": "5h0wca5e-0003-4000-8000-000000000020",
+      "name": "Approved?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        220,
+        460
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "5h0wca5e-0003-4000-8000-000000000019",
+              "leftValue": "={{ $json.Status === 'Approved' }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "5h0wca5e-0003-4000-8000-000000000021",
+      "name": "Send letter for signature",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        440,
+        440
+      ],
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "RUN-SETUP-FIRST"
+        },
+        "operation": "append",
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Outbox"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Time": "={{ $now.toFormat('yyyy-LL-dd HH:mm:ss') }}",
+            "Workflow": "Law intake",
+            "Ref": "={{ $json.Email }}",
+            "Channel": "Email",
+            "To": "={{ $json.Email }}",
+            "Message": "={{ 'Dear ' + $json.Client.split(' ')[0] + ', thank you for your enquiry. Your engagement letter is ready to review and sign: ' + $json['Engagement letter'] }}",
+            "Status": "Queued (demo outbox)"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Time",
+              "displayName": "Time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Workflow",
+              "displayName": "Workflow",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Channel",
+              "displayName": "Channel",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "To",
+              "displayName": "To",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Message",
+              "displayName": "Message",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Ref",
+              "displayName": "Ref",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ]
+        },
+        "options": {
+          "cellFormat": "RAW"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000
+    },
+    {
+      "id": "5h0wca5e-0003-4000-8000-000000000022",
+      "name": "Mark as sent",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        660,
+        440
+      ],
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "RUN-SETUP-FIRST"
+        },
+        "operation": "update",
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Law Intake"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Email": "={{ $json.Ref }}",
+            "Status": "Letter sent for signature"
+          },
+          "matchingColumns": [
+            "Email"
+          ],
+          "schema": [
+            {
+              "id": "Received",
+              "displayName": "Received",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Client",
+              "displayName": "Client",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Phone",
+              "displayName": "Phone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Matter type",
+              "displayName": "Matter type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Practice area",
+              "displayName": "Practice area",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Urgency",
+              "displayName": "Urgency",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Other party",
+              "displayName": "Other party",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Summary",
+              "displayName": "Summary",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Conflict check",
+              "displayName": "Conflict check",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Engagement letter",
+              "displayName": "Engagement letter",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ]
+        },
+        "options": {}
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000
+    },
+    {
+      "id": "5h0wca5e-0003-4000-8000-000000000023",
+      "name": "Note 23",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -60,
+        360
+      ],
+      "parameters": {
+        "content": "### Human step\nNothing reaches the client until the attorney sets **Status = Approved** in the intake sheet.",
+        "width": 980,
+        "height": 300,
+        "color": 4
+      }
+    }
+  ],
+  "connections": {
+    "New client intake form": {
+      "main": [
+        [
+          {
+            "node": "Tidy the answers",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tidy the answers": {
+      "main": [
+        [
+          {
+            "node": "Load client list",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load client list": {
+      "main": [
+        [
+          {
+            "node": "Conflict check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Conflict check": {
+      "main": [
+        [
+          {
+            "node": "Build Claude request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Claude request": {
+      "main": [
+        [
+          {
+            "node": "Claude: summarise and classify",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude: summarise and classify": {
+      "main": [
+        [
+          {
+            "node": "Check Claude's answer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Claude's answer": {
+      "main": [
+        [
+          {
+            "node": "Conflict found?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Conflict found?": {
+      "main": [
+        [
+          {
+            "node": "Put on hold for the attorney",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Draft the letter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Put on hold for the attorney": {
+      "main": [
+        [
+          {
+            "node": "Alert the attorney",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Draft the letter": {
+      "main": [
+        [
+          {
+            "node": "Create the letter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create the letter": {
+      "main": [
+        [
+          {
+            "node": "Write the letter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Write the letter": {
+      "main": [
+        [
+          {
+            "node": "File it in the letters folder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "File it in the letters folder": {
+      "main": [
+        [
+          {
+            "node": "Add to intake sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Attorney changes the status": {
+      "main": [
+        [
+          {
+            "node": "Approved?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Approved?": {
+      "main": [
+        [
+          {
+            "node": "Send letter for signature",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Send letter for signature": {
+      "main": [
+        [
+          {
+            "node": "Mark as sent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveManualExecutions": true
+  }
+}

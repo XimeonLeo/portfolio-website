@@ -1,0 +1,147 @@
+{
+  "name": "Portfolio demo · 0 Setup round 2 (run once)",
+  "nodes": [
+    {
+      "id": "5h0wca5e-0009-4000-8000-000000000001",
+      "name": "Add the new tabs",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "5h0wca5e-0009-4000-8000-000000000002",
+      "name": "Build tabs",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const NEW = {\"Bot Knowledge\":[\"Business\",\"Topic\",\"Answer\"],\"Chat Log\":[\"Time\",\"Channel\",\"Session\",\"Who\",\"Message\"],\"Chat Leads\":[\"Time\",\"Channel\",\"Name\",\"Contact\",\"Interest\",\"Summary\",\"Status\"],\"Bookings\":[\"Booked at\",\"Name\",\"Phone\",\"Service\",\"Day\",\"Time\",\"Status\"],\"Pipeline\":[\"Deal ID\",\"Contact\",\"Company\",\"Email\",\"Stage\",\"Value\",\"Owner\",\"Last touch\",\"Next step\",\"Health\"],\"Tasks\":[\"Created\",\"Deal ID\",\"Owner\",\"Task\",\"Due\",\"Why\"]};\n  const d = days => { const t = new Date(Date.now() - days * 864e5); return t.toISOString().slice(0, 10); };\n  const seed = {\n    'Bot Knowledge': [\n      ['Whitfield Coaching', 'Who we help', 'Whitfield Leadership Coaching works with newly promoted directors and heads of department who have gone from doing the work to leading people who do it.'],\n      ['Whitfield Coaching', 'Programmes', 'Three programmes: Starter sprint (4 weeks, one clear goal), Director programme (12 weeks, weekly then fortnightly sessions), Advisory retainer (monthly, for past clients).'],\n      ['Whitfield Coaching', 'Prices', 'Prices depend on the programme and are confirmed on a free 30-minute discovery call. The assistant must not quote a price.'],\n      ['Whitfield Coaching', 'How sessions work', 'Sessions are 60 minutes on video. Short check-ins by message between sessions. Two or three measures are agreed at the start.'],\n      ['Whitfield Coaching', 'Discovery call', 'A free 30-minute call with Dana Whitfield. To book one the assistant needs a name and an email address.'],\n      ['Whitfield Coaching', 'Company-paid coaching', 'Many clients have coaching paid for by their employer. Dana provides a short proposal that can be forwarded for sign-off.'],\n      ['Brightside Clinic', 'Opening hours', 'Monday to Friday 8:30 am to 5:30 pm. Closed weekends and public holidays.'],\n      ['Brightside Clinic', 'Address and parking', '214 Alder Street, Portland. Free parking behind the building. Step-free entrance on Alder Street.'],\n      ['Brightside Clinic', 'Appointment types', 'New patient visit (40 minutes), Check-up (20 minutes), Follow-up (15 minutes). The assistant never asks why the patient wants to be seen.'],\n      ['Brightside Clinic', 'Insurance', 'Most major plans are accepted. Bring your card to the visit and the front desk will confirm cover.'],\n      ['Brightside Clinic', 'Cancelling', 'Please give 24 hours notice. Reply here or call the front desk on 503 555 0100.'],\n      ['Brightside Clinic', 'Urgent problems', 'This chat is not for emergencies. For anything urgent call 911 or go to the nearest emergency department.'],\n    ],\n    Pipeline: [\n      ['D-201', 'Amelia Ross', 'Ross & Vane Architects', 'amelia@rossvane.example', 'New lead', '4800', 'Maya', d(2), '', ''],\n      ['D-202', 'Tomás Rivera', 'Rivera Dental Group', 'tomas@riveradental.example', 'Proposal sent', '12500', 'Maya', d(6), '', ''],\n      ['D-203', 'Helen Park', 'Parkside Physio', 'helen@parksidephysio.example', 'Proposal sent', '7200', 'Jordan', d(1), '', ''],\n      ['D-204', 'Marcus Hale', 'Hale & Bright Logistics', 'marcus@halebright.example', 'Negotiation', '18000', 'Jordan', d(9), '', ''],\n      ['D-205', 'Ingrid Olsen', 'Olsen Family Law', 'ingrid@olsenlaw.example', 'Won', '9600', 'Maya', d(0), '', ''],\n      ['D-206', 'Samir Khan', 'Khan Estates', 'samir@khanestates.example', 'Qualified', '6400', 'Jordan', d(3), '', ''],\n      ['D-207', 'Beatrice Lowe', 'Lowe Consulting', 'beatrice@loweconsulting.example', 'Lost', '5000', 'Maya', d(4), '', ''],\n      ['D-208', 'Felix Grant', 'Grant & Co Accountants', 'felix@grantco.example', 'New lead', '3900', 'Jordan', d(0), '', ''],\n    ],\n  };\n  const cell = (v, bold) => ({ userEnteredValue: { stringValue: String(v) }, ...(bold ? { userEnteredFormat: { textFormat: { bold: true }, backgroundColor: { red: .93, green: .91, blue: .86 } } } : {}) });\n  const requests = Object.entries(NEW).map(([title, head]) => ({ addSheet: { properties: { title, gridProperties: { frozenRowCount: 1 } } } }));\n  const data = Object.entries(NEW).map(([title, head]) => ({ range: `'${title}'!A1`, values: [head, ...(seed[title] || [])] }));\n  return [{ json: { add: { requests }, write: { valueInputOption: 'RAW', data } } }];"
+      }
+    },
+    {
+      "id": "5h0wca5e-0009-4000-8000-000000000003",
+      "name": "Add tabs",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        440,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://sheets.googleapis.com/v4/spreadsheets/RUN-SETUP-FIRST:batchUpdate",
+        "options": {
+          "timeout": 120000
+        },
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleSheetsOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.add) }}"
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000
+    },
+    {
+      "id": "5h0wca5e-0009-4000-8000-000000000004",
+      "name": "Write headers and samples",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        660,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://sheets.googleapis.com/v4/spreadsheets/RUN-SETUP-FIRST/values:batchUpdate",
+        "options": {
+          "timeout": 120000
+        },
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleSheetsOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($('Build tabs').first().json.write) }}"
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000
+    },
+    {
+      "id": "5h0wca5e-0009-4000-8000-000000000005",
+      "name": "Tab IDs to copy",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const out = {}; for (const r of $('Add tabs').first().json.replies) out[r.addSheet.properties.title] = r.addSheet.properties.sheetId;\n  return [{ json: { gids: JSON.stringify(out) } }];"
+      }
+    }
+  ],
+  "connections": {
+    "Add the new tabs": {
+      "main": [
+        [
+          {
+            "node": "Build tabs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build tabs": {
+      "main": [
+        [
+          {
+            "node": "Add tabs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Add tabs": {
+      "main": [
+        [
+          {
+            "node": "Write headers and samples",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Write headers and samples": {
+      "main": [
+        [
+          {
+            "node": "Tab IDs to copy",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveManualExecutions": true
+  }
+}
