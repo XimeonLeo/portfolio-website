@@ -246,6 +246,28 @@
 
 <br>
 
+<table>
+<tr>
+<td width="33%" valign="top">
+★★★★★<br><br>
+<i>"He is amazing and delivers every time"</i><br><br>
+<b>travelboutique</b> · <sub>Fiverr · Repeat client</sub>
+</td>
+<td width="33%" valign="top">
+★★★★★<br><br>
+<i>"very knowledgeable and was very helpful the entire time."</i><br><br>
+<b>cedoninvestment</b> · <sub>Fiverr · Quick responsiveness</sub>
+</td>
+<td width="33%" valign="top">
+★★★★★<br><br>
+<i>"very good service, I am very happy. I would highly recommend"</i><br><br>
+<b>leilani14</b> · <sub>Fiverr · Would recommend</sub>
+</td>
+</tr>
+</table>
+
+<br>
+
 ## ☺ About me
 
 <img src="site/assets/simeon-square.jpg" alt="Simeon Onabowale" width="150" align="left" hspace="18">
