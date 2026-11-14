@@ -635,3 +635,7 @@ button.try-visual{border:0;background:none;font:inherit;cursor:pointer}
   .hm-tag.t2{right:-124px;bottom:24%}
 }
 @media (max-width:400px){ .hm-tag.t1{right:-98px} .hm-tag.t2{right:-104px} }
+
+/* trust cards: breathing room under the dark integrations section */
+.trust-sec{padding:96px 0 110px}
+@media (max-width:640px){.trust-sec{padding:64px 0 80px}}
