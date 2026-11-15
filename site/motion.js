@@ -294,7 +294,7 @@ function snip(n) {
     const menu = $('.pk-menu', exEl);
     if (b.dataset.go) go(FLOWS[(cur() + +b.dataset.go + FLOWS.length) % FLOWS.length]);
     else if (b.dataset.id) go(FLOWS.find(f => f.ex.id === b.dataset.id));
-    else if (b.classList.contains('pk-shuffle')) { let f; do { f = FLOWS[Math.floor(Math.random() * FLOWS.length)]; } while (f.ex === ex); go(f); }
+    else if (b.classList.contains('pk-shuffle')) { exEl.classList.add('shuffled'); let f; do { f = FLOWS[Math.floor(Math.random() * FLOWS.length)]; } while (f.ex === ex); go(f); }
     else if (b.classList.contains('pk-cur')) { menu.hidden = !menu.hidden; b.setAttribute('aria-expanded', !menu.hidden); }
   };
   addEventListener('click', e => { const menu = $('.pk-menu', exEl); if (menu && !menu.hidden && !e.target.closest('.ed-pick')) { menu.hidden = true; $('.pk-cur', exEl).setAttribute('aria-expanded', 'false'); } });
