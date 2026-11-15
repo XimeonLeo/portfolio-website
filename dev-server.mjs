@@ -17,6 +17,9 @@ const read = () => { try { return JSON.parse(fs.readFileSync(FILE, 'utf8')); } c
 const store = {
   get: async k => read()[k] ?? null,
   set: async (k, v) => { const all = read(); all[k] = v; fs.mkdirSync(path.dirname(FILE), { recursive: true }); fs.writeFileSync(FILE, JSON.stringify(all, null, 2)); },
+  // uploaded files go to .local/media/ (same idea as Netlify Blobs)
+  getBin: async k => { const f = path.join(HERE, '.local', k); if (!fs.existsSync(f)) return null; const ext = path.extname(f); return { data: fs.readFileSync(f), type: { '.jpg': 'image/jpeg', '.png': 'image/png', '.webp': 'image/webp', '.mp4': 'video/mp4' }[ext] || 'application/octet-stream' }; },
+  setBin: async (k, buf) => { const f = path.join(HERE, '.local', k); fs.mkdirSync(path.dirname(f), { recursive: true }); fs.writeFileSync(f, buf); },
 };
 const api = createApi({ store, password: cfg.ADMIN_PASSWORD });
 

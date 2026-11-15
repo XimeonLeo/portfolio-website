@@ -78,9 +78,65 @@ textarea{resize:vertical;min-height:74px;line-height:1.45}
 .frame-wrap.phone{padding:18px}
 iframe{border:0;width:100%;height:100%;background:#fff}
 .frame-wrap.phone iframe{width:390px;max-width:100%;border-radius:22px;border:1px solid var(--line)}
+/* tabs */
+.dtabs{display:flex;gap:4px;padding:10px 22px 0;border-bottom:1px solid var(--line)}
+.dtabs button{background:none;border:0;border-bottom:2px solid transparent;padding:9px 12px;font-weight:600;font-size:13.5px;color:var(--mute)}
+.dtabs button.on{color:var(--text);border-color:var(--signal)}
+/* portfolio list */
+.wgroup{padding:18px 0 6px}
+.wgroup h3{margin:0 0 10px;font:500 11px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--mute)}
+.wlist{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:minmax(0,1fr);gap:6px;min-height:46px;border-radius:12px}
+@media (max-width:480px){ .wi{gap:5px;padding:7px 6px} .wi img,.wi .noimg{display:none} .wi button{width:25px;height:25px} }
+.wlist.over{outline:2px dashed var(--signal);outline-offset:4px}
+.wi{display:flex;align-items:center;gap:9px;padding:7px 8px;background:var(--bg);border:1px solid var(--line);border-radius:11px;font-size:13px}
+.wi.drag{opacity:.4}
+.wi.off{opacity:.45}
+.wi .h{cursor:grab;color:var(--mute);font-size:16px;padding:0 2px;user-select:none}
+.wi img,.wi .noimg{width:46px;height:30px;border-radius:6px;object-fit:cover;flex:none;background:#2a2924}
+.wi .t{flex:1;min-width:0}
+.wi .t b{display:block;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wi .t small{font:400 11px var(--mono);color:var(--mute)}
+.wi .t small.new{color:var(--ok)}
+.wi button{flex:none;width:27px;height:27px;border-radius:7px;border:1px solid var(--line);background:transparent;color:var(--mute);font-size:13px;line-height:1;display:grid;place-items:center;padding:0}
+.wi button:hover{color:var(--text);border-color:#55534a}
+.wi button.del:hover{color:#FF8A6B;border-color:#FF8A6B}
+/* item editor */
+.ed{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.6);display:grid;place-items:center;padding:20px}
+.ed-card{width:min(860px,100%);max-height:100%;display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--line);border-radius:18px;overflow:hidden}
+.ed-head{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid var(--line)}
+.ed-head b{font-size:16px}
+.ed-head .btn{padding:6px 12px;font-size:12.5px}
+.ed-body{overflow:auto;padding:4px 22px 18px}
+.ed-step{padding:20px 0;border-bottom:1px solid var(--line)}
+.ed-step:last-child{border-bottom:0}
+.ed-step h2{margin:0 0 6px;font-size:17px}
+.ed-step .hint{margin:0 0 12px;color:var(--mute);font-size:13px}
+.ed-step code{font-family:var(--mono);color:var(--text)}
+#edPrompt{font:12px/1.55 var(--mono);color:#cfcabc}
+.ed-row{display:flex;align-items:center;gap:12px;margin-top:10px}
+.mini{font-size:12.5px;color:var(--mute)}
+.mini.ok{color:var(--ok)} .mini.bad{color:#FF8A6B}
+.ed-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+select{width:100%;background:var(--bg);border:1px solid var(--line);border-radius:11px;padding:11px 13px;font:inherit;font-size:14px;color:var(--text)}
+.ed-media{margin:6px 0 4px;padding:16px;border:1px dashed var(--line);border-radius:14px}
+.up{display:flex;gap:12px;align-items:flex-start}
+.up>div{flex:1;display:grid;gap:8px}
+.thumb{width:96px;height:60px;border-radius:9px;background:#2a2924 center/cover no-repeat;flex:none;display:grid;place-items:center;color:var(--mute);font-size:18px}
+.up-btn{display:inline-flex;width:max-content;cursor:pointer;padding:8px 14px;font-size:13px;margin:0}
+.shot{display:flex;gap:10px;align-items:center;margin-bottom:8px}
+.shot .thumb{width:64px;height:40px}
+.shot input{flex:1}
+.shot button{width:30px;height:30px;border-radius:8px;border:1px solid var(--line);background:transparent;color:var(--mute)}
+.nums{display:grid;gap:6px}
+.nums div{display:grid;grid-template-columns:110px 1fr;gap:6px}
+.ed-more summary{cursor:pointer;font-weight:600;margin:16px 0 12px}
+.ed-foot{display:flex;align-items:center;justify-content:flex-end;gap:10px;padding:12px 20px;border-top:1px solid var(--line)}
+.ed-foot .mini{margin-right:auto}
+@media (max-width:640px){ .ed-grid{grid-template-columns:1fr} .ed{padding:0} .ed-card{border-radius:0;height:100%} }
 @media (max-width:900px){
   body{height:auto}
-  .app{grid-template-columns:1fr;height:auto}
+  .app{grid-template-columns:minmax(0,1fr);height:auto}
+  .app>*{min-width:0}
   .side{border-right:0}
   .form{overflow:visible}
   .side-foot{position:sticky;bottom:0;background:var(--panel)}
@@ -109,7 +165,17 @@ iframe{border:0;width:100%;height:100%;background:#fff}
     <div class="side-head"><span class="dot"></span><b>Control room</b>
       <div class="sp"><a class="btn" href="/" target="_blank" rel="noopener">View site ↗</a><button class="btn" id="logout" type="button">Log out</button></div>
     </div>
+    <div class="dtabs" role="tablist"><button type="button" class="on" data-tab="settings" role="tab">Site settings</button><button type="button" data-tab="work" role="tab">Portfolio</button></div>
     <form class="form" id="form" novalidate></form>
+    <div class="form" id="workPane" hidden>
+      <div class="group">
+        <h2>Portfolio</h2>
+        <p class="hint">Drag <b>⠿</b> or use ↑ ↓ to change the order. ⇄ moves an item to the other group. The eye hides an item without deleting it.</p>
+        <button class="btn primary" id="addItem" type="button">+ Add a portfolio item</button>
+      </div>
+      <div class="wgroup"><h3>Workflows you can watch run</h3><ul class="wlist" data-g="demo"></ul></div>
+      <div class="wgroup"><h3>Live with clients</h3><ul class="wlist" data-g="client"></ul></div>
+    </div>
     <div class="status" id="status" role="status"></div>
     <div class="side-foot">
       <button class="btn primary" id="save" type="button">Save and publish</button>
@@ -122,6 +188,70 @@ iframe{border:0;width:100%;height:100%;background:#fff}
     </div>
     <div class="frame-wrap" id="frameWrap"><iframe id="frame" title="Preview of your site"></iframe></div>
   </section>
+</div>
+
+<!-- ADD / EDIT A PORTFOLIO ITEM -->
+<div class="ed" id="ed" hidden role="dialog" aria-modal="true" aria-labelledby="edTitle">
+  <div class="ed-card">
+    <div class="ed-head"><b id="edTitle">Add a portfolio item</b><button class="btn" type="button" id="edClose">Close</button></div>
+    <div class="ed-body">
+      <section class="ed-step" id="edStep1">
+        <p class="eyebrow">Step 1 · Get the details</p>
+        <h2>Copy this prompt into Claude or ChatGPT</h2>
+        <p class="hint">Paste it together with whatever you have about the project: notes, client messages, the workflow file, screenshots. Answer its questions. At the end it gives you one block of text that starts with <code>{</code>.</p>
+        <textarea id="edPrompt" readonly rows="9"></textarea>
+        <div class="ed-row"><button class="btn primary" type="button" id="edCopy">Copy the prompt</button><span class="mini" id="edCopied"></span></div>
+      </section>
+      <section class="ed-step">
+        <p class="eyebrow">Step 2 · Paste what it gave you</p>
+        <textarea id="edJson" rows="5" placeholder='Paste the block that starts with { here'></textarea>
+        <div class="ed-row"><button class="btn" type="button" id="edFill">Fill the form</button><span class="mini" id="edFillMsg"></span></div>
+      </section>
+      <section class="ed-step">
+        <p class="eyebrow">Step 3 · Check it and add pictures</p>
+        <div class="ed-grid">
+          <div class="field"><label for="i_group">Where it goes</label><select id="i_group" data-i="group"><option value="demo">Workflows you can watch run</option><option value="client">Live with clients</option></select></div>
+          <div class="field"><label for="i_badge">Badge</label><select id="i_badge" data-i="badge"><option value="live">Live (real client)</option><option value="demo">Demo build (sample data)</option><option value="none">No badge</option></select></div>
+        </div>
+        <div class="field"><label for="i_category">Category line (small text above the title)</label><input type="text" id="i_category" data-i="category" maxlength="70" placeholder="Real estate · n8n + Claude"></div>
+        <div class="field"><label for="i_title">Title</label><input type="text" id="i_title" data-i="title" maxlength="140"></div>
+        <div class="field"><label for="i_desc">Short description (on the card)</label><textarea id="i_desc" data-i="desc" rows="2" maxlength="260"></textarea></div>
+        <div class="ed-grid">
+          <div class="field"><label for="i_statBig">Card number</label><input type="text" id="i_statBig" data-i="statBig" maxlength="14" placeholder="10 s"></div>
+          <div class="field"><label for="i_statLabel">What the number means</label><input type="text" id="i_statLabel" data-i="statLabel" maxlength="50" placeholder="full run, measured"></div>
+        </div>
+
+        <div class="ed-media">
+          <div class="field"><label>Cover image (the card picture)</label>
+            <div class="up"><span class="thumb" id="coverThumb"></span><div><label class="btn up-btn">Upload image<input type="file" accept="image/jpeg,image/png,image/webp" id="coverFile" hidden></label><input type="url" id="i_cover" data-i="cover" placeholder="or paste an image link"></div></div>
+          </div>
+          <div class="field"><label>Video (optional)</label>
+            <div class="up"><span class="thumb vid" id="videoThumb">▶</span><div><label class="btn up-btn">Upload MP4 (max 4.5 MB)<input type="file" accept="video/mp4" id="videoFile" hidden></label><input type="url" id="i_video" data-i="video" placeholder="or paste a YouTube, Loom, Vimeo or .mp4 link"></div></div>
+          </div>
+          <div class="field"><label>Screenshots for the case study (optional)</label>
+            <div id="shots"></div>
+            <label class="btn up-btn">+ Add screenshots<input type="file" accept="image/jpeg,image/png,image/webp" id="shotFiles" multiple hidden></label>
+          </div>
+          <p class="mini" id="upMsg"></p>
+        </div>
+
+        <details class="ed-more" open><summary>Case study (the pop-up when someone clicks the card)</summary>
+          <div class="field"><label for="i_tags">Tags (comma separated)</label><input type="text" id="i_tags" data-i="tags" placeholder="n8n, Claude, GoHighLevel, Real estate"></div>
+          <div class="field"><label for="i_sub">One line under the title</label><input type="text" id="i_sub" data-i="sub" maxlength="260"></div>
+          <div class="field"><label for="i_problem">The problem</label><textarea id="i_problem" data-i="problem" rows="3" maxlength="900"></textarea></div>
+          <div class="field"><label for="i_built">What I built (one point per line)</label><textarea id="i_built" data-i="built" rows="5"></textarea></div>
+          <div class="field"><label for="i_changed">What changed / what the run shows</label><textarea id="i_changed" data-i="changed" rows="3" maxlength="900"></textarea></div>
+          <div class="field"><label>By the numbers (up to 4)</label><div class="nums" id="nums"></div></div>
+          <div class="field"><label for="i_stack">Stack</label><input type="text" id="i_stack" data-i="stack" maxlength="200" placeholder="n8n · Claude · Google Sheets"></div>
+          <div class="ed-grid">
+            <div class="field"><label for="i_linkLabel">Button text (optional)</label><input type="text" id="i_linkLabel" data-i="linkLabel" maxlength="40" placeholder="See it live"></div>
+            <div class="field"><label for="i_linkUrl">Button link</label><input type="url" id="i_linkUrl" data-i="linkUrl" placeholder="https://…"></div>
+          </div>
+        </details>
+      </section>
+    </div>
+    <div class="ed-foot"><span class="mini" id="edErr"></span><button class="btn" type="button" id="edCancel">Cancel</button><button class="btn primary" type="button" id="edSave">Add to portfolio</button></div>
+  </div>
 </div>
 
 <script>
@@ -206,11 +336,281 @@ $('#form').addEventListener('click', e => {
 });
 addEventListener('message', e => {
   if (e.origin !== location.origin || e.source !== $('#frame').contentWindow || !e.data || e.data.type !== 'site-preview-ready') return;
-  frameReady = true; push();
+  frameReady = true; push(); pushWork();
 });
 $('#vDesk').onclick = () => { $('#frameWrap').classList.remove('phone'); $('#vDesk').classList.add('on'); $('#vPhone').classList.remove('on'); };
 $('#vPhone').onclick = () => { $('#frameWrap').classList.add('phone'); $('#vPhone').classList.add('on'); $('#vDesk').classList.remove('on'); };
-addEventListener('beforeunload', e => { if (!$('#app').hidden && dirty()) { e.preventDefault(); e.returnValue = ''; } });
+addEventListener('beforeunload', e => { if (!$('#app').hidden && (dirty() || workDirty())) { e.preventDefault(); e.returnValue = ''; } });
+
+/* ================= PORTFOLIO (Work section) ================= */
+const WORK_CACHE = 'site-work-v1';
+let tab = 'settings', builtins = [], work = { order: { demo: [], client: [] }, hidden: [], items: {} }, workSaved = '';
+const workJSON = () => JSON.stringify(work);
+// site paths like assets/work/x.jpg are relative to the home page, not /door/
+const abs = u => (u && !/^(https?:|\/|data:|blob:)/.test(u) ? '/' + u : u || '');
+const workDirty = () => workJSON() !== workSaved;
+
+const $$ = s => [...document.querySelectorAll(s)];
+function setTab(t) {
+  tab = t;
+  $$('.dtabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
+  $('#form').hidden = t !== 'settings'; $('#workPane').hidden = t !== 'work';
+  $('#save').textContent = t === 'work' ? 'Save and publish portfolio' : 'Save and publish';
+  $('#reset').hidden = t === 'work';
+  if (t === 'work') { const f = $('#frame').contentWindow; try { f.document.getElementById('work').scrollIntoView(); } catch {} }
+  refreshStatus();
+}
+$$('.dtabs button').forEach(b => b.onclick = () => setTab(b.dataset.tab));
+function refreshStatus() {
+  const d = tab === 'work' ? workDirty() : dirty();
+  status(d ? 'Unsaved changes. Visitors still see the old version.' : '');
+}
+
+// built-in cards are read from the live page itself, so the list always matches the site
+async function loadBuiltins() {
+  try {
+    const html = await (await fetch('/', { cache: 'no-store' })).text();
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const out = [];
+    doc.querySelectorAll('#work .work-grid').forEach(g => g.querySelectorAll(':scope > .case[data-case]').forEach(el => {
+      const img = el.querySelector('img'), vid = el.querySelector('video');
+      out.push({ id: el.dataset.case, title: (el.querySelector('h3') || {}).textContent || el.dataset.case, group: g.classList.contains('demo-grid') ? 'demo' : 'client',
+        thumb: img ? img.getAttribute('src') : vid ? vid.getAttribute('poster') : '', badge: el.querySelector('.demo-pill') ? 'Demo build' : el.querySelector('.live-pill') ? 'Live' : '' });
+    }));
+    builtins = out;
+  } catch { builtins = []; }
+}
+// the same ordering rules as work.js on the site
+function effective() {
+  const all = new Map(builtins.map(b => [b.id, { ...b, builtin: true }]));
+  Object.values(work.items).forEach(it => all.set(it.id, { id: it.id, title: it.title, group: it.group, thumb: it.cover, badge: it.badge === 'demo' ? 'Demo build' : it.badge === 'live' ? 'Live' : '', builtin: false }));
+  const placed = new Set(), res = { demo: [], client: [] }, inOrder = new Set([...work.order.demo, ...work.order.client]);
+  for (const g of ['demo', 'client']) {
+    work.order[g].forEach(id => { if (all.has(id) && !placed.has(id)) { res[g].push(id); placed.add(id); } });
+    builtins.filter(b => b.group === g && !placed.has(b.id) && !inOrder.has(b.id)).forEach(b => { res[g].push(b.id); placed.add(b.id); });
+    Object.values(work.items).filter(it => it.group === g && !placed.has(it.id)).forEach(it => { res[g].push(it.id); placed.add(it.id); });
+  }
+  return { all, res };
+}
+function normalise() { const { res } = effective(); work.order = res; }
+function pushWork() { if (frameReady) $('#frame').contentWindow.postMessage({ type: 'work-preview', work }, location.origin); }
+function workChanged() { renderList(); pushWork(); refreshStatus(); }
+
+function renderList() {
+  const { all, res } = effective();
+  for (const g of ['demo', 'client']) {
+    const ul = document.querySelector(`.wlist[data-g="${g}"]`);
+    ul.innerHTML = res[g].map((id, i) => {
+      const it = all.get(id), off = work.hidden.includes(id);
+      const thumb = it.thumb ? `<img src="${esc(abs(it.thumb))}" alt="">` : '<span class="noimg"></span>';
+      return `<li class="wi ${off ? 'off' : ''}" draggable="true" data-id="${esc(id)}"><span class="h" title="Drag to move">⠿</span>${thumb}
+        <div class="t"><b>${esc(it.title)}</b><small class="${it.builtin ? '' : 'new'}">${it.builtin ? 'Built in' : 'Added by you'}${it.badge ? ' · ' + esc(it.badge) : ''}${off ? ' · hidden' : ''}</small></div>
+        <button type="button" data-act="up" title="Move up" ${i ? '' : 'disabled'}>↑</button><button type="button" data-act="down" title="Move down" ${i < res[g].length - 1 ? '' : 'disabled'}>↓</button>
+        <button type="button" data-act="swap" title="Move to the other group">⇄</button>
+        <button type="button" data-act="eye" title="${off ? 'Show on the site' : 'Hide from the site'}">${off ? '◌' : '◉'}</button>
+        ${it.builtin ? '' : `<button type="button" data-act="edit" title="Edit">✎</button><button type="button" class="del" data-act="del" title="Delete">✕</button>`}</li>`;
+    }).join('') || '<li class="mini" style="padding:8px">Nothing here. Drag an item in.</li>';
+  }
+}
+$('#workPane').addEventListener('click', e => {
+  const b = e.target.closest('[data-act]'); if (!b) return;
+  const li = b.closest('.wi'), id = li.dataset.id; normalise();
+  const g = work.order.demo.includes(id) ? 'demo' : 'client', arr = work.order[g], i = arr.indexOf(id);
+  const act = b.dataset.act;
+  if (act === 'up' && i > 0) [arr[i - 1], arr[i]] = [arr[i], arr[i - 1]];
+  if (act === 'down' && i < arr.length - 1) [arr[i + 1], arr[i]] = [arr[i], arr[i + 1]];
+  if (act === 'swap') { arr.splice(i, 1); const o = g === 'demo' ? 'client' : 'demo'; work.order[o].unshift(id); if (work.items[id]) work.items[id].group = o; }
+  if (act === 'eye') work.hidden = work.hidden.includes(id) ? work.hidden.filter(x => x !== id) : [...work.hidden, id];
+  if (act === 'edit') return openEditor(work.items[id]);
+  if (act === 'del') {
+    if (!confirm('Delete "' + work.items[id].title + '" from the portfolio? You can add it again later from its prompt answer.')) return;
+    delete work.items[id]; arr.splice(i, 1); work.hidden = work.hidden.filter(x => x !== id);
+  }
+  workChanged();
+});
+// drag and drop between and within the two lists
+let dragId = null;
+$('#workPane').addEventListener('dragstart', e => { const li = e.target.closest('.wi'); if (!li) return; dragId = li.dataset.id; li.classList.add('drag'); e.dataTransfer.effectAllowed = 'move'; try { e.dataTransfer.setData('text/plain', dragId); } catch {} });
+$('#workPane').addEventListener('dragend', () => { dragId = null; $$('.wi.drag').forEach(x => x.classList.remove('drag')); $$('.wlist.over').forEach(x => x.classList.remove('over')); });
+$('#workPane').addEventListener('dragover', e => { const ul = e.target.closest('.wlist'); if (!ul || !dragId) return; e.preventDefault(); $$('.wlist').forEach(x => x.classList.toggle('over', x === ul)); });
+$('#workPane').addEventListener('drop', e => {
+  const ul = e.target.closest('.wlist'); if (!ul || !dragId) return; e.preventDefault();
+  normalise(); const g = ul.dataset.g;
+  for (const k of ['demo', 'client']) work.order[k] = work.order[k].filter(x => x !== dragId);
+  const over = e.target.closest('.wi'); let at = work.order[g].length;
+  if (over && over.dataset.id !== dragId) { const r = over.getBoundingClientRect(); at = work.order[g].indexOf(over.dataset.id) + (e.clientY > r.top + r.height / 2 ? 1 : 0); }
+  work.order[g].splice(at, 0, dragId);
+  if (work.items[dragId]) work.items[dragId].group = g;
+  workChanged();
+});
+
+/* ---------- the prompt you give to Claude or ChatGPT ---------- */
+const PROMPT = `I want to add a new project to my portfolio website. Please help me write it up.
+
+About me: I'm ${'${NAME}'}, a freelance AI automation specialist. I build with n8n, Make.com, Zapier, Claude and GoHighLevel: AI agents, chatbots, document pipelines, CRM and lead automation.
+
+How to work with me:
+1. Read everything I share about the project (notes, client messages, workflow files, screenshots).
+2. Then ask me the questions you still need, a few at a time. Make sure you know:
+   - Is it a real client build that is live, or a demo build with sample data?
+   - What was the client struggling with before? (the problem)
+   - What exactly did I build, step by step?
+   - What changed afterwards, or what does a test run show?
+   - Which numbers can we show? Only measured results or plain facts about the build.
+   - Can the client's name be shown? (assume no unless I say yes)
+   - Do I have a screen recording, screenshots or a public link?
+3. Rules: never invent numbers, results, clients or quotes. Use only facts I give you. Leave client names and personal details out unless I say they can be shown. Plain, specific English, short sentences, no hype words. Write as "I" (it's my portfolio).
+4. When you have everything, reply with ONLY one JSON object in exactly this shape, and nothing else:
+
+{
+  "group": "client" (live with real clients) or "demo" (demo build with sample data),
+  "badge": "live", "demo" or "none",
+  "category": "Industry · tools, max 70 characters, e.g. Real estate · n8n + Claude",
+  "title": "card title, max 90 characters, says what the system does",
+  "desc": "one or two sentences for the card, max 220 characters",
+  "statBig": "one short number for the card, e.g. 10 s, 0 or 1,000+",
+  "statLabel": "what that number means, max 45 characters",
+  "tags": ["4 to 6 short tags: the tools and the industry"],
+  "sub": "one line under the title in the pop-up: who it was for, or that it is a demo",
+  "problem": "2 to 3 sentences: the situation before",
+  "built": ["4 to 6 points, each one thing I built"],
+  "changed": "2 to 3 sentences: what is different now, or what the run shows",
+  "results": [["number", "what it means"], ["number", "what it means"]],
+  "stack": "the tools, separated by ·",
+  "alt": "one sentence describing the cover image",
+  "shots": [["", "caption for each screenshot I should add"]],
+  "linkLabel": "button text if there is a public link, otherwise empty",
+  "linkUrl": "the https link, otherwise empty"
+}`;
+const FIELDS_I = ['group', 'badge', 'category', 'title', 'desc', 'statBig', 'statLabel', 'cover', 'video', 'tags', 'sub', 'problem', 'built', 'changed', 'stack', 'linkLabel', 'linkUrl'];
+let draft = null, editingId = null, shotHints = [];
+const blank = () => ({ id: '', group: 'client', badge: 'live', category: '', title: '', desc: '', statBig: '', statLabel: '', cover: '', video: '', alt: '', tags: [], sub: '', problem: '', built: [], changed: '', results: [], stack: '', shots: [], linkLabel: '', linkUrl: '' });
+function openEditor(it) {
+  editingId = it ? it.id : null; draft = it ? JSON.parse(JSON.stringify(it)) : blank(); shotHints = [];
+  $('#edTitle').textContent = it ? 'Edit portfolio item' : 'Add a portfolio item';
+  $('#edSave').textContent = it ? 'Save changes' : 'Add to portfolio';
+  $('#edPrompt').value = PROMPT.replace('${NAME}', state.name || D.name);
+  $('#edJson').value = ''; $('#edFillMsg').textContent = ''; $('#edErr').textContent = ''; $('#upMsg').textContent = ''; $('#edCopied').textContent = '';
+  $('#edStep1').hidden = !!it;
+  fillEditor(); $('#ed').hidden = false; (it ? $('#i_title') : $('#edCopy')).focus();
+}
+function closeEditor() { $('#ed').hidden = true; draft = null; }
+function fillEditor() {
+  for (const k of FIELDS_I) { const el = $('#i_' + k); if (!el) continue; const v = draft[k]; el.value = k === 'tags' ? (v || []).join(', ') : k === 'built' ? (v || []).join('\n') : (v || ''); }
+  $('#coverThumb').style.backgroundImage = draft.cover ? `url("${abs(draft.cover)}")` : '';
+  $('#videoThumb').textContent = draft.video ? '✓' : '▶';
+  $('#nums').innerHTML = [0, 1, 2, 3].map(i => `<div><input type="text" data-n="${i}" data-p="0" maxlength="30" placeholder="number" value="${esc((draft.results[i] || [])[0] || '')}"><input type="text" data-n="${i}" data-p="1" maxlength="80" placeholder="what it means" value="${esc((draft.results[i] || [])[1] || '')}"></div>`).join('');
+  renderShots();
+}
+function renderShots() {
+  $('#shots').innerHTML = draft.shots.map((s, i) => `<div class="shot"><span class="thumb" style="background-image:url('${esc(abs(s[0]))}')"></span><input type="text" data-shot="${i}" maxlength="140" placeholder="Caption" value="${esc(s[1])}"><button type="button" data-rmshot="${i}" title="Remove">✕</button></div>`).join('')
+    + (shotHints.length ? `<p class="mini">Suggested screenshots: ${shotHints.map(esc).join(' · ')}</p>` : '');
+}
+function readEditor() {
+  for (const k of FIELDS_I) {
+    const el = $('#i_' + k); if (!el) continue; const v = el.value.trim();
+    draft[k] = k === 'tags' ? v.split(',').map(x => x.trim()).filter(Boolean) : k === 'built' ? v.split('\n').map(x => x.replace(/^[-•*]\s*/, '').trim()).filter(Boolean) : v;
+  }
+  draft.results = [0, 1, 2, 3].map(i => [$(`[data-n="${i}"][data-p="0"]`).value.trim(), $(`[data-n="${i}"][data-p="1"]`).value.trim()]).filter(r => r[0]);
+  $$('[data-shot]').forEach(inp => { if (draft.shots[+inp.dataset.shot]) draft.shots[+inp.dataset.shot][1] = inp.value.trim(); });
+}
+$('#addItem').onclick = () => openEditor(null);
+$('#edClose').onclick = $('#edCancel').onclick = closeEditor;
+$('#ed').addEventListener('keydown', e => { if (e.key === 'Escape') closeEditor(); });
+$('#edCopy').onclick = async () => {
+  try { await navigator.clipboard.writeText($('#edPrompt').value); } catch { $('#edPrompt').select(); document.execCommand('copy'); }
+  $('#edCopied').textContent = 'Copied. Paste it into Claude or ChatGPT.'; $('#edCopied').className = 'mini ok';
+};
+$('#edFill').onclick = () => {
+  const raw = $('#edJson').value, a = raw.indexOf('{'), b = raw.lastIndexOf('}'), msg = $('#edFillMsg');
+  let o; try { o = JSON.parse(raw.slice(a, b + 1)); } catch { msg.textContent = 'That does not look like the block from the prompt. Copy everything from { to }.'; msg.className = 'mini bad'; return; }
+  readEditor();
+  const keep = { cover: draft.cover, video: draft.video, shots: draft.shots };
+  for (const k of Object.keys(blank())) if (k in o && k !== 'id') draft[k] = o[k];
+  if (!['client', 'demo'].includes(draft.group)) draft.group = 'client';
+  if (!['live', 'demo', 'none'].includes(draft.badge)) draft.badge = draft.group === 'demo' ? 'demo' : 'live';
+  shotHints = Array.isArray(o.shots) ? o.shots.map(s => Array.isArray(s) ? s[1] : s).filter(x => typeof x === 'string' && x) : [];
+  draft.shots = keep.shots; if (!draft.cover) draft.cover = keep.cover; if (!draft.video) draft.video = keep.video;
+  ['tags', 'built'].forEach(k => { if (!Array.isArray(draft[k])) draft[k] = String(draft[k] || '').split(k === 'tags' ? ',' : '\n').map(x => x.trim()).filter(Boolean); });
+  if (!Array.isArray(draft.results)) draft.results = [];
+  fillEditor(); msg.textContent = 'Filled in. Check each field, then add the pictures.'; msg.className = 'mini ok';
+};
+
+/* uploads: images are resized in the browser first so they load fast */
+function shrink(file, max = 1800) {
+  return new Promise(res => {
+    if (!/^image\/(jpeg|png|webp)$/.test(file.type)) return res(file);
+    const img = new Image(), u = URL.createObjectURL(file);
+    img.onload = () => {
+      const s = Math.min(1, max / Math.max(img.width, img.height));
+      if (s === 1 && file.size < 1.2e6) { URL.revokeObjectURL(u); return res(file); }
+      const c = document.createElement('canvas'); c.width = Math.round(img.width * s); c.height = Math.round(img.height * s);
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(u);
+      c.toBlob(b => res(b && b.size < file.size ? new File([b], 'image.jpg', { type: 'image/jpeg' }) : file), 'image/jpeg', .86);
+    };
+    img.onerror = () => { URL.revokeObjectURL(u); res(file); };
+    img.src = u;
+  });
+}
+async function upload(file) {
+  const f = await shrink(file);
+  if (f.size > 4.5 * 1024 * 1024) throw new Error('"' + file.name + '" is over 4.5 MB. Make it smaller, or paste a link to it instead.');
+  const r = await fetch('/api/media', { method: 'POST', headers: { 'Content-Type': f.type, Authorization: 'Bearer ' + (token() || '') }, body: f });
+  const j = await r.json().catch(() => ({}));
+  if (r.status === 401) { closeEditor(); showLogin('Your session ended. Log in again.'); throw new Error('auth'); }
+  if (!r.ok) throw new Error(j.error || 'Upload failed.');
+  return j.url;
+}
+const upMsg = (t, cls = '') => { $('#upMsg').textContent = t; $('#upMsg').className = 'mini ' + cls; };
+$('#coverFile').onchange = async e => { const f = e.target.files[0]; if (!f) return; upMsg('Uploading the cover…'); try { readEditor(); draft.cover = await upload(f); fillEditor(); upMsg('Cover uploaded.', 'ok'); } catch (err) { if (err.message !== 'auth') upMsg(err.message, 'bad'); } e.target.value = ''; };
+$('#videoFile').onchange = async e => { const f = e.target.files[0]; if (!f) return; upMsg('Uploading the video…'); try { readEditor(); draft.video = await upload(f); fillEditor(); upMsg('Video uploaded.', 'ok'); } catch (err) { if (err.message !== 'auth') upMsg(err.message, 'bad'); } e.target.value = ''; };
+$('#shotFiles').onchange = async e => {
+  const files = [...e.target.files]; if (!files.length) return; readEditor();
+  for (let i = 0; i < files.length; i++) {
+    upMsg(`Uploading screenshot ${i + 1} of ${files.length}…`);
+    try { const url = await upload(files[i]); draft.shots.push([url, shotHints[draft.shots.length] || '']); renderShots(); }
+    catch (err) { if (err.message !== 'auth') upMsg(err.message, 'bad'); return; }
+  }
+  upMsg('Screenshots uploaded. Add a caption to each one.', 'ok'); e.target.value = '';
+};
+$('#shots').addEventListener('click', e => { const b = e.target.closest('[data-rmshot]'); if (!b) return; readEditor(); draft.shots.splice(+b.dataset.rmshot, 1); renderShots(); });
+$('#i_cover').addEventListener('change', () => { readEditor(); $('#coverThumb').style.backgroundImage = draft.cover ? `url("${abs(draft.cover)}")` : ''; });
+
+const slug = s => String(s).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 32) || 'item';
+$('#edSave').onclick = () => {
+  readEditor(); const err = $('#edErr'); err.className = 'mini bad';
+  if (!draft.title) { err.textContent = 'Add a title first.'; $('#i_title').focus(); return; }
+  if (!draft.desc) { err.textContent = 'Add a short description for the card.'; $('#i_desc').focus(); return; }
+  const linkOk = v => !v || /^https:\/\//.test(v) || /^\/api\/media\//.test(v);
+  for (const k of ['cover', 'video', 'linkUrl']) if (!linkOk(draft[k])) { err.textContent = 'Links must start with https://'; $('#i_' + k).focus(); return; }
+  if (!editingId) {
+    let id = slug(draft.title), n = 2; const taken = new Set([...builtins.map(b => b.id), ...Object.keys(work.items)]);
+    while (taken.has(id) || id.length < 2) id = slug(draft.title).slice(0, 28) + '-' + n++;
+    draft.id = id; normalise(); work.order[draft.group].unshift(id);
+  } else {
+    normalise(); const was = work.order.demo.includes(editingId) ? 'demo' : 'client';
+    if (was !== draft.group) { work.order[was] = work.order[was].filter(x => x !== editingId); work.order[draft.group].unshift(editingId); }
+  }
+  work.items[draft.id] = draft; closeEditor(); workChanged();
+  status(editingId ? 'Changes ready. Press "Save and publish portfolio" to put them live.' : 'Added to the top of its group. Press "Save and publish portfolio" to put it live.');
+};
+
+async function saveWork() {
+  normalise();
+  const r = await fetch('/api/work', { method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + (token() || '') }, body: workJSON() });
+  const j = await r.json().catch(() => ({}));
+  if (r.status === 401) { showLogin('Your session ended. Log in again.'); throw new Error('auth'); }
+  if (!r.ok) throw new Error(j.error || 'Could not save.');
+  work = j.work; normalise(); workSaved = workJSON();
+  try { localStorage.setItem(WORK_CACHE, JSON.stringify(j.work)); } catch {}
+  renderList(); pushWork();
+}
+async function loadWork() {
+  await loadBuiltins();
+  try { const r = await fetch('/api/work', { cache: 'no-store' }); const o = r.ok ? await r.json() : {}; work = { order: { demo: [], client: [], ...(o.order || {}) }, hidden: o.hidden || [], items: o.items || {} }; }
+  catch { status('Could not load the portfolio.', 'bad'); }
+  normalise(); workSaved = workJSON(); renderList(); pushWork();
+}
 
 /* ---------- talking to the backend ---------- */
 const token = () => { try { const t = sessionStorage.getItem(TOKEN); return t && Number(t.split('.')[0]) > Date.now() ? t : null; } catch { return null; } };
@@ -225,6 +625,11 @@ function remember(o) { saved = o; try { localStorage.setItem(CACHE, JSON.stringi
 
 $('#save').onclick = async () => {
   $('#save').disabled = true; status('Saving…');
+  if (tab === 'work') {
+    try { await saveWork(); status('Saved. The live site now shows this portfolio.', 'ok'); }
+    catch (e) { if (e.message !== 'auth') status(e.message, 'bad'); }
+    $('#save').disabled = false; return;
+  }
   try { const j = await call('PUT', diff(state)); remember(j.settings); status('Saved. The live site now shows this version.', 'ok'); }
   catch (e) { if (e.message !== 'auth') status(e.message, 'bad'); }
   $('#save').disabled = false;
@@ -245,6 +650,7 @@ async function showApp() {
     saved = o; state = { ...D, ...o, hidden: [...(o.hidden || [])] };
   } catch { status('Could not load the saved settings.', 'bad'); }
   fill();
+  await loadWork();
   if (!$('#frame').src) $('#frame').src = '/?preview=1'; else push();
 }
 $('#loginForm').onsubmit = async e => {

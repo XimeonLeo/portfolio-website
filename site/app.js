@@ -226,19 +226,31 @@ const CASES = {
     results: [['7', 'phases planned'], ['11', 'custom fields'], ['100%', 'changes documented']], stack: 'GoHighLevel pipelines, fields, tags & workflows' },
 };
 const modal = $('#modal');
-$$('.case').forEach(c => c.onclick = () => openCase(c.dataset.case));
+// one listener for every card, including cards added later from the door (work.js)
+document.addEventListener('click', e => { const c = e.target.closest('.case[data-case]'); if (c && CASES[c.dataset.case]) openCase(c.dataset.case); });
+window.CASES = CASES; window.SHOTS = SHOTS; window.openCase = id => openCase(id);
+// YouTube / Vimeo / Loom links → an embeddable player address
+const embedUrl = u => {
+  let m;
+  if ((m = /(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([\w-]{6,})/.exec(u))) return 'https://www.youtube-nocookie.com/embed/' + m[1] + '?rel=0';
+  if ((m = /vimeo\.com\/(?:video\/)?(\d+)/.exec(u))) return 'https://player.vimeo.com/video/' + m[1];
+  if ((m = /loom\.com\/(?:share|embed)\/([\w]+)/.exec(u))) return 'https://www.loom.com/embed/' + m[1];
+  return '';
+};
+const shotSrc = f => (/^(https?:|\/|assets\/)/.test(f) ? f : `assets/work/${f}.jpg`);
 $$('[data-open]').forEach(a => a.onclick = e => { if (CASES[a.dataset.open]) { e.preventDefault(); openCase(a.dataset.open); } });
 function openCase(id) {
   const c = CASES[id];
   $('#mTags').innerHTML = c.tags.map(t => `<span class="tag ${t.startsWith('●') ? 'live' : t === 'Demo build' ? 'demo' : ''}">${t}</span>`).join('');
   $('#mTitle').textContent = c.title; $('#mSub').textContent = c.sub;
   const card = document.querySelector(`.case[data-case="${id}"]`), vid = card && card.querySelector('video'), img = card && card.querySelector('.case-img img');
-  const dv = card && card.dataset.video;
-  const media = dv ? `<figure class="mb-media"><video src="${dv}" poster="${img.dataset.shot || img.getAttribute('src')}" controls autoplay loop muted playsinline preload="metadata"></video><figcaption>Screen recording of a real run of this demo build, sped up where it waits. Sample data only.</figcaption></figure>`
+  const dv = card && card.dataset.video, ev = dv && embedUrl(dv);
+  const media = ev ? `<figure class="mb-media mb-embed"><iframe src="${esc(ev)}" title="Video: ${esc(c.title)}" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen loading="lazy"></iframe><figcaption>Video walkthrough of this build.</figcaption></figure>`
+    : dv ?`<figure class="mb-media"><video src="${dv}" poster="${img ? (img.dataset.shot || img.getAttribute('src')) : ''}" controls autoplay loop muted playsinline preload="metadata"></video><figcaption>Screen recording of a real run of this demo build, sped up where it waits. Sample data only.</figcaption></figure>`
     : vid ? `<figure class="mb-media"><video src="${vid.getAttribute('src')}" poster="${vid.getAttribute('poster')}" controls muted playsinline preload="metadata"></video><figcaption>Real screen recording from the live system. Client details are hidden.</figcaption></figure>`
     : img ? `<figure class="mb-media"><img src="${img.dataset.shot || img.getAttribute('src')}" alt="${esc(img.alt)}"><figcaption>${esc(img.alt)}</figcaption></figure>` : '';
   const shots = SHOTS[id] || [];
-  const strip = shots.length ? `<div class="mb-shots"><button type="button" class="on" data-shot="" aria-label="Back to the main view"><span>${dv || vid ? '▶ Recording' : 'Main view'}</span></button>${shots.map(([f, cap]) => `<button type="button" data-shot="assets/work/${f}.jpg" data-cap="${esc(cap)}"><img src="assets/work/${f}.jpg" alt="${esc(cap)}" loading="lazy"></button>`).join('')}</div>` : '';
+  const strip = shots.length ? `<div class="mb-shots"><button type="button" class="on" data-shot="" aria-label="Back to the main view"><span>${dv || vid ? '▶ Recording' : 'Main view'}</span></button>${shots.map(([f, cap]) => `<button type="button" data-shot="${esc(shotSrc(f))}" data-cap="${esc(cap)}"><img src="${esc(shotSrc(f))}" alt="${esc(cap)}" loading="lazy"></button>`).join('')}</div>` : '';
   $('#mBody').innerHTML = media + strip + `
     <div class="mb-sec"><div class="k">The problem</div><p>${esc(c.problem)}</p></div>
     <div class="mb-sec"><div class="k">What I built</div><ul>${c.built.map(b => `<li>${esc(b)}</li>`).join('')}</ul></div>

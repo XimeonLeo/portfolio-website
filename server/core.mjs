@@ -36,6 +36,50 @@ export function clean(input) {
   return { out, bad };
 }
 
+/* ---------- portfolio (Work section): order, hidden items, items added from the door ---------- */
+const ID = v => (typeof v === 'string' && /^[a-z0-9][a-z0-9-]{1,39}$/.test(v) ? v : undefined);
+// links: https, or files we host ourselves (/api/media/…, assets/…)
+const link = v => {
+  if (v === '' || v == null) return '';
+  if (typeof v !== 'string' || v.length > 400) return undefined;
+  if (/^\/api\/media\/[a-z0-9]{16,40}\.(jpg|png|webp|mp4)$/.test(v) || /^assets\/[a-z0-9/_.-]{3,120}$/i.test(v)) return v;
+  try { const u = new URL(v); return u.protocol === 'https:' ? u.href : undefined; } catch { return undefined; }
+};
+const txt = (v, max) => (typeof v === 'string' ? v.trim().slice(0, max) : '');
+const list = (v, n, max) => (Array.isArray(v) ? v.filter(x => typeof x === 'string' && x.trim()).slice(0, n).map(x => x.trim().slice(0, max)) : []);
+function cleanItem(it) {
+  const id = ID(it && it.id); if (!id) return null;
+  const title = txt(it.title, 140); if (!title) return null;
+  const pairs = (v, n) => (Array.isArray(v) ? v.filter(p => Array.isArray(p) && p[0]).slice(0, n).map(p => [txt(String(p[0]), 30), txt(String(p[1] || ''), 80)]) : []);
+  const shots = Array.isArray(it.shots) ? it.shots.map(s => Array.isArray(s) ? [link(s[0]), txt(String(s[1] || ''), 140)] : null).filter(s => s && s[0]).slice(0, 12) : [];
+  return {
+    id, title, group: it.group === 'demo' ? 'demo' : 'client',
+    badge: ['demo', 'live', 'none'].includes(it.badge) ? it.badge : 'none',
+    category: txt(it.category, 70), desc: txt(it.desc, 260),
+    statBig: txt(it.statBig, 14), statLabel: txt(it.statLabel, 50),
+    cover: link(it.cover) || '', video: link(it.video) || '', alt: txt(it.alt, 160),
+    tags: list(it.tags, 8, 30), sub: txt(it.sub, 260), problem: txt(it.problem, 900),
+    built: list(it.built, 10, 300), changed: txt(it.changed, 900),
+    results: pairs(it.results, 6), stack: txt(it.stack, 200), shots,
+    linkLabel: txt(it.linkLabel, 40), linkUrl: link(it.linkUrl) || '',
+  };
+}
+export function cleanWork(input) {
+  const out = { order: { demo: [], client: [] }, hidden: [], items: {} };
+  if (!input || typeof input !== 'object') return out;
+  const items = input.items && typeof input.items === 'object' ? Object.values(input.items) : [];
+  for (const it of items.slice(0, 60)) { const c = cleanItem(it); if (c) out.items[c.id] = c; }
+  const seen = new Set();
+  for (const g of ['demo', 'client']) {
+    const arr = input.order && Array.isArray(input.order[g]) ? input.order[g] : [];
+    for (const id of arr) if (ID(id) && !seen.has(id) && seen.size < 120) { seen.add(id); out.order[g].push(id); }
+  }
+  out.hidden = Array.isArray(input.hidden) ? [...new Set(input.hidden.filter(ID))].slice(0, 120) : [];
+  return out;
+}
+const MEDIA_TYPES = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'video/mp4': 'mp4' };
+const MEDIA_MAX = 4.5 * 1024 * 1024;
+
 const json = (status, body, extra = {}) => new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', 'X-Robots-Tag': 'noindex', ...extra } });
 const sha = s => crypto.createHash('sha256').update(String(s)).digest();
 const sign = (secret, exp) => crypto.createHmac('sha256', secret).update('door.' + exp).digest('hex');
@@ -75,6 +119,33 @@ export function createApi({ store, password, secret }) {
     const path = new URL(req.url).pathname.replace(/\/+$/, '');
     try {
       if (path === '/api/login' && req.method === 'POST') return await login(req, ip);
+      if (path === '/api/work') {
+        if (req.method === 'GET') return json(200, (await store.get('work')) || {});
+        if (req.method === 'PUT' || req.method === 'POST') {
+          if (!tokenOk(req)) return json(401, { error: 'Please log in again.' });
+          let body; try { body = await req.json(); } catch { return json(400, { error: 'That did not look like portfolio data.' }); }
+          const out = cleanWork(body);
+          await store.set('work', out);
+          return json(200, { ok: true, work: out });
+        }
+      }
+      if (path === '/api/media' && req.method === 'POST') {
+        if (!tokenOk(req)) return json(401, { error: 'Please log in again.' });
+        const type = (req.headers.get('content-type') || '').split(';')[0].trim().toLowerCase(), ext = MEDIA_TYPES[type];
+        if (!ext) return json(400, { error: 'Only JPG, PNG, WEBP images or MP4 videos can be uploaded.' });
+        const buf = Buffer.from(await req.arrayBuffer());
+        if (!buf.length) return json(400, { error: 'The file was empty.' });
+        if (buf.length > MEDIA_MAX) return json(413, { error: 'That file is over 4.5 MB. Make it smaller, or paste a link to it instead.' });
+        const name = crypto.randomBytes(12).toString('hex') + '.' + ext;
+        await store.setBin('media/' + name, buf, type);
+        return json(200, { ok: true, url: '/api/media/' + name });
+      }
+      const mm = /^\/api\/media\/([a-z0-9]{16,40}\.(?:jpg|png|webp|mp4))$/.exec(path);
+      if (mm && req.method === 'GET') {
+        const f = await store.getBin('media/' + mm[1]);
+        if (!f) return json(404, { error: 'Not found' });
+        return new Response(f.data, { status: 200, headers: { 'Content-Type': f.type, 'Cache-Control': 'public, max-age=31536000, immutable', 'X-Content-Type-Options': 'nosniff' } });
+      }
       if (path === '/api/settings') {
         if (req.method === 'GET') return json(200, (await store.get('settings')) || {});
         if (req.method === 'PUT' || req.method === 'POST') {

@@ -34,6 +34,7 @@
 <link rel="stylesheet" href="styles.css">
 <link rel="stylesheet" href="motion.css">
 <link rel="stylesheet" href="chatmock.css">
+<link rel="stylesheet" href="footer-glow.css">
 <script src="settings.js"></script>
 </head>
 <body>
@@ -257,7 +258,7 @@
   <div class="wrap">
     <div class="sec-head">
       <div data-r><p class="eyebrow">Selected work</p><h2>Workflows you can <em>watch run.</em></h2></div>
-      <p data-r>Eight builds with a screen recording of a real run, then seven systems that are live with clients. Open any card for the problem, the build and what happened.</p>
+      <p data-r><span data-wc="demo" data-cap>Eight</span> builds with a screen recording of a real run, then <span data-wc="client">seven</span> systems that are live with clients. Open any card for the problem, the build and what happened.</p>
     </div>
     <p class="demo-note" data-r><b>Demo builds.</b> Real n8n workflows, run for real, with made-up sample data. Texts and emails go to a test outbox instead of being sent.</p>
 
@@ -329,7 +330,7 @@
 
     <div class="demo-head" data-r>
       <div><p class="eyebrow">Live with clients</p><h3>Systems that are in daily use for real teams.</h3></div>
-      <p>Seven builds for real clients. Names are kept private, and every number comes from the running system.</p>
+      <p><span data-wc="client" data-cap>Seven</span> builds for real clients. Names are kept private, and every number comes from the running system.</p>
     </div>
     <div class="work-grid">
       <button class="case feature" data-case="closing" data-r>
@@ -680,5 +681,7 @@
 <script src="motion.js" defer></script>
 <script src="demo.js"></script>
 <script src="chatmock.js" defer></script>
+<script src="footer-glow.js" defer></script>
+<script src="work.js"></script>
 </body>
 </html>

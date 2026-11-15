@@ -1,0 +1,12 @@
+/* Footer "runs itself." glowing write-on sign (footer-glow.js) */
+.giant .gs{display:block;width:100%;height:auto;overflow:visible;--bloom:0;filter:drop-shadow(0 0 calc(var(--bloom) * 38px) rgba(255,90,31,calc(var(--bloom) * .55)))}
+.giant .gs text{font-family:var(--serif);font-weight:700;letter-spacing:-.04em}
+.giant .gs .it{font-style:italic}
+.giant .gs-base{fill:#1d1d19}
+.giant .gs-base .it{fill:#2a1810}
+.giant .gs .st{fill:none;stroke-width:2.2;stroke-linejoin:round;stroke-linecap:round}
+.giant .gs .st.a{stroke:#F6EEE0}
+.giant .gs .st.b{stroke:#FF6A2E}
+.giant .gs .hd{fill:none;stroke:#FFF8EE;stroke-width:5;stroke-linecap:round;opacity:0}
+.giant .gs-fill,.giant .gs-sweep{opacity:0}
+.giant .gs-sweep{mix-blend-mode:screen}

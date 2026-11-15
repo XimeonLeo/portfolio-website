@@ -641,3 +641,18 @@ button.try-visual{border:0;background:none;font:inherit;cursor:pointer}
 .sol-note b{color:var(--ink)}
 @media (max-width:860px){ .sol-grid{grid-template-columns:1fr 1fr} .sol-grid.ind{grid-template-columns:1fr} }
 @media (max-width:640px){ .sol-grid{grid-template-columns:1fr} .sol{padding:22px 20px 20px} }
+
+/* case-study popup: embedded video (YouTube / Vimeo / Loom) for items added from the door */
+.mb-embed iframe{display:block;width:100%;aspect-ratio:16/9;border:0;border-radius:14px;background:#000}
+.case-img .ph-cover{display:grid;place-items:center;width:100%;height:100%;aspect-ratio:16/10;background:linear-gradient(135deg,var(--paper-2),var(--card));font:600 13px var(--mono);color:var(--mute)}
+.case.has-video .case-img{position:relative}
+.case.has-video .play{position:absolute;right:14px;bottom:14px;width:38px;height:38px;border-radius:50%;background:var(--ink);color:var(--paper);display:grid;place-items:center;font-size:12px;padding-left:2px;box-shadow:0 6px 16px -6px rgba(0,0,0,.5);transition:transform .25s,background .25s}
+.case.has-video:hover .play{background:var(--signal);transform:scale(1.08)}
+
+/* Work grid sizing set by work.js so rows stay full after reordering (wins over the nth-child rule above) */
+@media (min-width:1061px){
+  #work .work-grid{grid-template-columns:repeat(6,1fr)}
+  #work .work-grid .case.w2{grid-column:span 2}
+  #work .work-grid .case.w3{grid-column:span 3}
+  #work .work-grid .case.w4c{grid-column:3 / span 2}
+}
