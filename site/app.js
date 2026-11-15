@@ -227,6 +227,7 @@ const CASES = {
 };
 const modal = $('#modal');
 $$('.case').forEach(c => c.onclick = () => openCase(c.dataset.case));
+$$('[data-open]').forEach(a => a.onclick = e => { if (CASES[a.dataset.open]) { e.preventDefault(); openCase(a.dataset.open); } });
 function openCase(id) {
   const c = CASES[id];
   $('#mTags').innerHTML = c.tags.map(t => `<span class="tag ${t.startsWith('●') ? 'live' : t === 'Demo build' ? 'demo' : ''}">${t}</span>`).join('');
@@ -282,7 +283,7 @@ const SVC = [
   ['Lead generation engines', 'Research, qualification and personalised first lines at volume, with checks that keep the data honest.', ['Lead research', 'Enrichment', 'Personalised copy', 'CSV / CRM export']],
   ['Rescues & audits', 'Automations that fail silently or that a previous developer left behind: diagnosed, fixed and documented.', ['Audit report', 'Fix plan', 'Documentation', 'Monitoring']],
 ];
-$('#svcList').innerHTML = SVC.map(([h, d, li], i) => `<div class="svc" data-r tabindex="0"><span class="no">0${i + 1}</span><h3>${h}</h3><div class="d">${d}<ul>${li.map(x => `<li>${x}</li>`).join('')}</ul></div><span class="pl">+</span></div>`).join('');
+const svcEl = $('#svcList'); if (svcEl) svcEl.innerHTML = SVC.map(([h, d, li], i) => `<div class="svc" data-r tabindex="0"><span class="no">0${i + 1}</span><h3>${h}</h3><div class="d">${d}<ul>${li.map(x => `<li>${x}</li>`).join('')}</ul></div><span class="pl">+</span></div>`).join('');
 $$('.svc').forEach(s => { io.observe(s); s.onclick = () => s.classList.toggle('open'); s.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); s.classList.toggle('open'); } }; });
 
 /* ---------- brief ---------- */

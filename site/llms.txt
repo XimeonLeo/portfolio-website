@@ -11,6 +11,17 @@
 - Typical clients: law offices, real estate teams, clinics and medical centres, coaches and consultants.
 - Upwork: identity-verified freelancer, https://www.upwork.com/freelancers/~012e9a6098279f78fc
 
+## What people hire him for
+
+- Freelance AI automation specialist: an alternative to hiring an AI automation agency or a no-code automation agency. Clients work directly with the builder.
+- AI workflow automation services and business process automation with AI.
+- GoHighLevel automation expert: pipelines, workflows, forms, contracts, onboarding.
+- n8n workflow automation expert, plus Make.com and Zapier, and custom API integration services.
+- AI CRM automation services and an automated lead qualification system: leads scored by rules, answered in seconds, routed to a person when hot.
+- Omnichannel lead generation automation: forms, ads, WhatsApp, calls and email into one pipeline.
+- WhatsApp AI chatbot developer, AI voice agents for business (Vapi, Retell AI), and 24/7 AI customer service automation.
+- Industry builds: AI automation for real estate, AI automation for home services, clinic booking AI automation, law-office document automation.
+
 ## Services
 
 - Document and data pipelines: PDFs, contracts and forms read by AI, checked in code, and turned into filled templates, sheets or CRM records.

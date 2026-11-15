@@ -11,7 +11,8 @@ const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
 /* ---------- logos ---------- */
 const ICONS = window.ICONS || {};
 const CUSTOM = {
-  ghl: { t: 'GoHighLevel', c: '#188BF6', txt: 'HL' }, openai: { t: 'OpenAI', c: '#111111', txt: 'AI' },
+  ghl: { t: 'GoHighLevel', c: '#188BF6', svg: '<path d="M2 21V10.5H0L4 5l4 5.5H6V21z" fill="#FFBC00"/><path d="M10 21V7.5H8L12 2l4 5.5h-2V21z" fill="#188BF6"/><path d="M18 21V10.5h-2L20 5l4 5.5h-2V21z" fill="#37CA37"/>' },
+  monday: { t: 'monday.com', c: '#6161FF', svg: '<path d="M3.1 18a2.4 2.4 0 0 1-2-3.7l4.2-6.7a2.4 2.4 0 1 1 4 2.5l-4.2 6.8A2.4 2.4 0 0 1 3.1 18z" fill="#FF3D57"/><path d="M11.2 18a2.4 2.4 0 0 1-2-3.7l4.2-6.7a2.4 2.4 0 1 1 4 2.5l-4.2 6.8a2.4 2.4 0 0 1-2 1.1z" fill="#FFCB00"/><circle cx="20.8" cy="15.5" r="2.5" fill="#00D647"/>' }, openai: { t: 'OpenAI', c: '#111111', txt: 'AI' },
   twilio: { t: 'Twilio', c: '#F22F46', txt: '⁘' }, code: { t: 'Code', c: '#FF6D5A', txt: '{ }' },
   if: { t: 'If', c: '#3E9C5B', txt: '⇄' }, router: { t: 'Router', c: '#6D00CC', txt: '⑂' },
   schedule: { t: 'Schedule', c: '#7A5AF8', txt: '⏱' }, formatter: { t: 'Formatter', c: '#FF4F00', txt: 'Aa' },
@@ -19,10 +20,11 @@ const CUSTOM = {
   web: { t: 'HTTP', c: '#2D7FF9', txt: '⇅' }, pdf: { t: 'PDF', c: '#D93025', txt: 'PDF' }, word: { t: 'Word', c: '#2B579A', txt: 'W' },
 };
 const meta = s => ICONS[s] || CUSTOM[s] || { t: s, c: '#666', txt: s.slice(0, 2).toUpperCase() };
-const DARK = new Set(['notion', 'anthropic', 'typeform']);
+const DARK = new Set(['notion', 'anthropic', 'typeform', 'slack', 'openai']);
 // mode: 'brand' = brand-coloured mark, 'white' = white mark (for coloured tiles)
 function logo(s, size = 24, mode = 'brand') {
   const m = meta(s);
+  if (m.svg) return `<svg class="lg" viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true">${m.svg}</svg>`;
   if (m.p) {
     const fill = mode === 'white' ? '#fff' : m.c;
     return `<svg class="lg" viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true"><path fill="${fill}" d="${m.p}"/></svg>`;
@@ -203,21 +205,114 @@ const ED = {
     ]},
   ]},
 };
+/* ---------- more example flows: online store, CRM & sales, bookings ---------- */
+const EX_NOTE = 'Example build. The app previews show what each step produces, using made-up data.';
+ED.n8n.examples.push(
+  { id: 'shopOrder', name: 'Shopify order → packing board → alerts', run: '4.6 s', note: EX_NOTE, nodes: [
+    { ic: 'shopify', n: 'New paid order', t: 'Shopify Trigger', trig: 1, x: 40, y: 170, d: 'A customer pays for an order in the store.', ui: { k: 'order', where: 'Orders', no: 'Order #1092', status: 'Paid', items: [['Linen shirt × 2', '$96.00'], ['Canvas tote × 1', '$28.00']], total: '$124.00' } },
+    { ic: 'code', n: 'Check stock', t: 'Code', x: 200, y: 170, d: 'Works out what is left in stock once this order ships.', ui: { k: 'kv', rows: [['Linen shirt left', '3'], ['Reorder point', '5'], ['Order value', '$124.00']] } },
+    { ic: 'notion', n: 'Add to packing board', t: 'Notion · Create page', x: 360, y: 170, d: 'The order lands on the team\'s packing board, ready to pick.', ui: { k: 'table', where: 'Packing board', cols: ['Order', 'Items', 'Status'], row: ['#1092', '3', ['To pack', '#E9A23B']] } },
+    { ic: 'whatsapp', n: 'Confirm to customer', t: 'WhatsApp · Send', x: 520, y: 170, d: 'The customer gets a confirmation on WhatsApp straight away.', ui: { k: 'chat', side: 'out', where: 'Ada O.', text: 'Thanks Ada! Order #1092 is confirmed. We will message you the tracking link when it ships.' } },
+    { ic: 'slack', n: 'Tell the team', t: 'Slack · Send message', x: 680, y: 170, d: 'The team channel hears about every new order.', ui: { k: 'chat', where: '#orders', from: 'Store bot', text: 'New order #1092 · $124.00 · 3 items. It is on the packing board.' } },
+    { ic: 'if', n: 'Stock running low?', t: 'If', x: 840, y: 170, d: 'Only warns the owner when a product drops below its reorder point.', ui: { k: 'kv', rows: [['3 left, reorder at 5', 'Yes']] } },
+    { ic: 'telegram', n: 'Warn the owner', t: 'Telegram · Send message', x: 1000, y: 170, d: 'A short Telegram message, so the owner can reorder before it sells out.', ui: { k: 'chat', where: 'Owner', text: 'Low stock: Linen shirt, 3 left after order #1092. Time to reorder.' } },
+  ], edges: [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 6, 'true']], order: [0, 1, 2, 3, 4, 5, 6] },
+  { id: 'ghlLead', name: 'GoHighLevel lead → AI qualify → pipeline', run: '5.2 s', note: EX_NOTE, nodes: [
+    { ic: 'ghl', n: 'New contact', t: 'GoHighLevel Trigger', trig: 1, x: 40, y: 170, d: 'Someone fills in the form on the website and lands in the CRM.', ui: { k: 'kv', where: 'Contacts', rows: [['Name', 'Daniel Reyes'], ['Source', 'Website form'], ['Asked about', 'Kitchen remodel']] } },
+    { ic: 'claude', n: 'Qualify the lead', t: 'Claude · structured JSON', x: 200, y: 170, d: 'Claude reads the enquiry and pulls out budget, timeline and fit.', ui: { k: 'kv', rows: [['Budget', '$25k – 40k'], ['Timeline', 'Within 2 months'], ['Fit', 'Strong']] } },
+    { ic: 'code', n: 'Score by rules', t: 'Code', x: 360, y: 170, d: 'The score comes from rules in code, so it is the same every time.', ui: { k: 'kv', rows: [['Score', '88 / 100'], ['Why', 'Budget, timeline, in area']] } },
+    { ic: 'ghl', n: 'Create opportunity', t: 'GoHighLevel', x: 520, y: 170, d: 'A deal is created in the right pipeline stage, with the value filled in.', ui: { k: 'deal', where: 'Sales pipeline', stages: ['New', 'Qualified', 'Booked'], stage: 'Qualified', name: 'Daniel Reyes', value: '$32,000' } },
+    { ic: 'if', n: 'Hot lead?', t: 'If', x: 680, y: 170, d: 'Hot leads go to a person now. The rest go into nurture.', ui: { k: 'kv', rows: [['88 is 70 or more', 'Yes']] } },
+    { ic: 'slack', n: 'Alert sales', t: 'Slack · Send message', x: 840, y: 90, d: 'Sales sees the lead, the score and the reason in one message.', ui: { k: 'chat', where: '#sales', from: 'Lead bot', text: 'Hot lead (88): Daniel Reyes, kitchen remodel, $25k – 40k, wants to start within 2 months.' } },
+    { ic: 'whatsapp', n: 'Reply to the lead', t: 'WhatsApp · Send', x: 1000, y: 90, d: 'The lead hears back in seconds, while they are still thinking about it.', ui: { k: 'chat', side: 'out', where: 'Daniel Reyes', text: 'Hi Daniel, thanks for reaching out about your kitchen. Are you free for a 15-minute call tomorrow?' } },
+    { ic: 'ghl', n: 'Add to nurture', t: 'GoHighLevel · Add to workflow', x: 840, y: 260, d: 'Cooler leads get a gentle follow-up sequence instead.', ui: { k: 'kv', rows: [['Workflow', '90-day nurture'], ['This run', 'Not taken']] } },
+  ], edges: [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5, 'true'], [5, 6], [4, 7, 'false']], order: [0, 1, 2, 3, 4, 5, 6] });
+ED.make.examples.push(
+  { id: 'cart', name: 'Abandoned cart → WhatsApp → email', run: '6 operations', note: EX_NOTE, nodes: [
+    { ic: 'shopify', n: 'Shopify', t: 'Watch abandoned checkouts', trig: 1, x: 60, y: 170, d: 'A shopper adds to the basket, then leaves without paying.', ui: { k: 'order', where: 'Checkouts', no: 'Checkout · Ada O.', status: 'Abandoned 1 h ago', tone: 'warn', items: [['Ceramic mug set × 1', '$42.00']], total: '$42.00' } },
+    { ic: 'claude', n: 'Claude', t: 'Write a friendly nudge', x: 250, y: 170, d: 'Writes a short, personal message about what was left behind.', ui: { k: 'kv', rows: [['Tone', 'Friendly, no pressure'], ['Mentions', 'Mug set, free returns']] } },
+    { ic: 'whatsapp', n: 'WhatsApp', t: 'Send a message', x: 440, y: 170, d: 'The nudge goes out on WhatsApp first, where it is most likely to be read.', ui: { k: 'chat', side: 'out', where: 'Ada O.', text: 'Hi Ada, you left the ceramic mug set in your basket. It is still there if you want it: shop.example/cart' } },
+    { ic: 'router', n: 'Router', t: 'Bought within 24 hours?', x: 630, y: 170, d: 'If they bought, stop. If not, try one email.', ui: { k: 'kv', rows: [['Order placed', 'No'], ['Next', 'Email follow-up']] } },
+    { ic: 'gmail', n: 'Gmail', t: 'Send a reminder', x: 820, y: 80, d: 'One polite email, then the flow stops. No pestering.', ui: { k: 'mail', to: 'ada@example.com', subject: 'Still thinking it over?', text: 'Your basket is saved. Here is what other customers say about the mug set.' } },
+    { ic: 'googlesheets', n: 'Google Sheets', t: 'Log the result', x: 820, y: 260, d: 'Every cart is logged, so you can see what the flow wins back.', ui: { k: 'table', where: 'Cart recovery', cols: ['Customer', 'Cart', 'Step'], row: ['Ada O.', '$42.00', ['Email sent', '#2D7FF9']] } },
+  ], edges: [[0, 1], [1, 2], [2, 3], [3, 4], [3, 5]], order: [0, 1, 2, 3, 4, 5] },
+  { id: 'mondayWon', name: 'monday.com deal won → onboarding', run: '6 operations', note: EX_NOTE, nodes: [
+    { ic: 'monday', n: 'monday.com', t: 'Watch status change', trig: 1, x: 60, y: 170, d: 'Someone on the team marks a deal as Won on the board.', ui: { k: 'table', where: 'Deals board', cols: ['Deal', 'Value', 'Status'], row: ['Parkside Physio', '$7,200', ['Won', '#00C875']] } },
+    { ic: 'googledrive', n: 'Google Drive', t: 'Create client folder', x: 250, y: 170, d: 'A client folder is created from your template.', ui: { k: 'kv', where: 'Clients', rows: [['Folder', 'Parkside Physio'], ['Inside', 'Contract · Brief · Assets']] } },
+    { ic: 'notion', n: 'Notion', t: 'Create client hub', x: 440, y: 170, d: 'The client gets a row in the hub, with an owner and a kickoff to book.', ui: { k: 'table', where: 'Client hub', cols: ['Client', 'Kickoff', 'Owner'], row: ['Parkside Physio', 'To book', ['Maya', '#8A5CF6']] } },
+    { ic: 'gmail', n: 'Gmail', t: 'Send the welcome pack', x: 630, y: 170, d: 'The welcome email goes out with the onboarding form and a booking link.', ui: { k: 'mail', to: 'helen@parksidephysio.example', subject: 'Welcome aboard: next steps', text: 'Hi Helen, here is your onboarding form and a link to book the kickoff call.' } },
+    { ic: 'slack', n: 'Slack', t: 'Post in #wins', x: 820, y: 80, d: 'The whole team sees the win, and that onboarding is already moving.', ui: { k: 'chat', where: '#wins', from: 'Deals bot', text: 'Parkside Physio just signed · $7,200. Folder, hub and welcome email are done.' } },
+    { ic: 'telegram', n: 'Telegram', t: 'Tell the owner', x: 820, y: 260, d: 'The owner gets it on their phone, wherever they are.', ui: { k: 'chat', where: 'Owner', text: 'New client: Parkside Physio ($7,200). Onboarding has started.' } },
+  ], edges: [[0, 1], [1, 2], [2, 3], [3, 4], [3, 5]], order: [0, 1, 2, 3, 4, 5] });
+ED.zap.examples.push(
+  { id: 'reorder', name: 'Low stock → reorder task → supplier', run: '5 steps', note: EX_NOTE, nodes: [
+    { ic: 'shopify', n: 'Inventory Level Updated', t: 'Shopify', trig: 1, d: 'Stock changes after a sale.', ui: { k: 'kv', where: 'Inventory', rows: [['Linen shirt', '3 in stock'], ['Reorder point', '5']] } },
+    { ic: 'filter', n: 'Only continue if…', t: 'Filter by Zapier', d: 'Carries on only when stock is below the reorder point.', ui: { k: 'kv', rows: [['3 is below 5', 'Continue']] } },
+    { ic: 'monday', n: 'Create item', t: 'monday.com', d: 'A reorder task appears on the purchasing board.', ui: { k: 'table', where: 'Purchasing board', cols: ['Item', 'Qty', 'Status'], row: ['Linen shirt', '40', ['Order now', '#E2445C']] } },
+    { ic: 'gmail', n: 'Send email', t: 'Gmail', d: 'The supplier gets the reorder request.', ui: { k: 'mail', to: 'orders@supplier.example', subject: 'Reorder: Linen shirt × 40', text: 'Hi, please confirm the price and delivery date for 40 units.' } },
+    { ic: 'telegram', n: 'Send message', t: 'Telegram', d: 'The owner is told it has been handled.', ui: { k: 'chat', where: 'Owner', text: 'Reorder sent to the supplier: Linen shirt × 40. The task is on the purchasing board.' } },
+  ]},
+  { id: 'ghlAppt', name: 'GoHighLevel booking → reminders → team', run: '5 steps', note: EX_NOTE, nodes: [
+    { ic: 'ghl', n: 'Appointment Booked', t: 'GoHighLevel', trig: 1, d: 'A client books through your GoHighLevel calendar.', ui: { k: 'kv', where: 'Calendar', rows: [['Client', 'Grace Lin'], ['When', 'Thu 2:00 pm'], ['Type', 'Consultation']] } },
+    { ic: 'googlecalendar', n: 'Create detailed event', t: 'Google Calendar', d: 'The booking goes onto the team calendar.', ui: { k: 'kv', where: 'Thursday', rows: [['Event', 'Consultation: Grace Lin'], ['Time', '2:00 – 2:30 pm']] } },
+    { ic: 'whatsapp', n: 'Send confirmation', t: 'WhatsApp', d: 'The client gets a confirmation and an easy way to reschedule.', ui: { k: 'chat', side: 'out', where: 'Grace Lin', text: 'Hi Grace, you are booked for Thursday at 2:00 pm. Reply R if you need to reschedule.' } },
+    { ic: 'slack', n: 'Send channel message', t: 'Slack', d: 'The team channel is told.', ui: { k: 'chat', where: '#bookings', from: 'Booking bot', text: 'New consultation: Grace Lin, Thu 2:00 pm.' } },
+    { ic: 'notion', n: 'Create database item', t: 'Notion', d: 'A prep card is added so nobody walks into the call cold.', ui: { k: 'table', where: 'Client prep', cols: ['Client', 'Call', 'Prep'], row: ['Grace Lin', 'Thu 2:00 pm', ['To do', '#E9A23B']] } },
+  ]});
+const CAT = { shopOrder: 'Online store', cart: 'Online store', reorder: 'Online store', shop: 'Online store', invoice: 'Online store',
+  ghlLead: 'CRM & sales', mondayWon: 'CRM & sales', leads: 'CRM & sales',
+  ghlAppt: 'Bookings & chat', booking: 'Bookings & chat', reception: 'Bookings & chat',
+  closing: 'Documents', tracker: 'Documents' };
+const CAT_ORDER = ['Online store', 'CRM & sales', 'Bookings & chat', 'Documents'];
+const FLOWS = CAT_ORDER.flatMap(c => Object.entries(ED).flatMap(([tool, v]) => v.examples.filter(x => CAT[x.id] === c).map(ex => ({ tool, ex, cat: c }))));
+const appsOf = x => [...new Set(x.nodes.map(n => n.ic).filter(i => ICONS[i] || (CUSTOM[i] && CUSTOM[i].svg)))];
+
+/* a small preview of what the step produced, styled like the app it happened in */
+function snip(n) {
+  const u = n.ui; if (!u) return '';
+  const m = meta(n.ic), pill = c => `<i class="pill" style="--p:${c[1]}">${esc(c[0])}</i>`;
+  let b = '';
+  if (u.k === 'order') b = `<div class="sn-order"><div class="so-h"><b>${esc(u.no)}</b><i class="pill" style="--p:${u.tone === 'warn' ? '#C77700' : '#0F7A55'}">${esc(u.status)}</i></div>${u.items.map(([a, v]) => `<div class="so-l"><span>${esc(a)}</span><span>${esc(v)}</span></div>`).join('')}<div class="so-t"><span>Total</span><b>${esc(u.total)}</b></div></div>`;
+  else if (u.k === 'chat') b = `<div class="sn-chat ${u.side || 'in'}">${u.from ? `<small><i>${esc(u.from[0])}</i>${esc(u.from)} <em>APP</em></small>` : ''}<p>${esc(u.text)}</p><time>now${u.side === 'out' ? ' ✓✓' : ''}</time></div>`;
+  else if (u.k === 'mail') b = `<div class="sn-mail"><small>To: ${esc(u.to)}</small><b>${esc(u.subject)}</b><p>${esc(u.text)}</p></div>`;
+  else if (u.k === 'table') b = `<table class="sn-table"><tr>${u.cols.map(c => `<th>${esc(c)}</th>`).join('')}</tr><tr class="new">${u.row.map(c => `<td>${Array.isArray(c) ? pill(c) : esc(c)}</td>`).join('')}</tr><tr class="ghost"><td colspan="${u.cols.length}"></td></tr></table>`;
+  else if (u.k === 'deal') b = `<div class="sn-deal">${u.stages.map(s => `<div class="${s === u.stage ? 'on' : ''}"><small>${esc(s)}</small>${s === u.stage ? `<span><b>${esc(u.name)}</b>${esc(u.value)}</span>` : '<span class="e"></span>'}</div>`).join('')}</div>`;
+  else if (u.k === 'kv') b = `<div class="sn-kv">${u.rows.map(([a, v]) => `<div><span>${esc(a)}</span><b>${esc(v)}</b></div>`).join('')}</div>`;
+  return `<div class="snip a-${n.ic}" style="--c:${m.c}"><div class="sn-top">${logo(n.ic, 15)}<b>${esc(m.t)}</b>${u.where ? `<span>${esc(u.where)}</span>` : ''}</div>${b}</div>`;
+}
 (() => {
   const sec = $('#replay'); if (!sec) return;
   const toolsEl = $('#edTools'), exEl = $('#edExamples'), win = $('#edWindow'), chrome = $('#edChrome'), canvas = $('#edCanvas'), world = $('#edWorld'), panel = $('#edPanel'), foot = $('#edFoot'), prog = $('#edProg');
   let tool = 'n8n', ex = ED.n8n.examples[0], W = 1100, H = 360, lastR = null, picked = null;
   toolsEl.innerHTML = Object.entries(ED).map(([k, v]) => `<button role="tab" data-k="${k}">${logo(v.logo, 18)}<span>${v.name}</span></button>`).join('');
   toolsEl.onclick = e => { const b = e.target.closest('button'); if (b) { tool = b.dataset.k; ex = ED[tool].examples[0]; build(); } };
-  exEl.onclick = e => { const b = e.target.closest('button'); if (b) { ex = ED[tool].examples.find(x => x.id === b.dataset.id); build(); } };
+  exEl.className = 'ed-pick';
+  const cur = () => FLOWS.findIndex(f => f.ex === ex);
+  const go = f => { tool = f.tool; ex = f.ex; try { sessionStorage.setItem('ed-flow', ex.id); } catch (e) {} build(); };
+  exEl.onclick = e => {
+    const b = e.target.closest('button'); if (!b) return;
+    const menu = $('.pk-menu', exEl);
+    if (b.dataset.go) go(FLOWS[(cur() + +b.dataset.go + FLOWS.length) % FLOWS.length]);
+    else if (b.dataset.id) go(FLOWS.find(f => f.ex.id === b.dataset.id));
+    else if (b.classList.contains('pk-shuffle')) { let f; do { f = FLOWS[Math.floor(Math.random() * FLOWS.length)]; } while (f.ex === ex); go(f); }
+    else if (b.classList.contains('pk-cur')) { menu.hidden = !menu.hidden; b.setAttribute('aria-expanded', !menu.hidden); }
+  };
+  addEventListener('click', e => { const menu = $('.pk-menu', exEl); if (menu && !menu.hidden && !e.target.closest('.ed-pick')) { menu.hidden = true; $('.pk-cur', exEl).setAttribute('aria-expanded', 'false'); } });
+  addEventListener('keydown', e => { const menu = $('.pk-menu', exEl); if (e.key === 'Escape' && menu && !menu.hidden) { menu.hidden = true; $('.pk-cur', exEl).focus(); } });
   world.onclick = e => { const n = e.target.closest('.en'); if (n) { picked = +n.dataset.i; showPanel(picked); } };
 
   function build() {
     picked = null; lastR = null;
     $$('button', toolsEl).forEach(b => b.classList.toggle('on', b.dataset.k === tool));
-    exEl.innerHTML = ED[tool].examples.map(x => `<button data-id="${x.id}" class="${x === ex ? 'on' : ''}">${esc(x.name)}</button>`).join('');
+    const f = FLOWS[cur()];
+    exEl.innerHTML = `<button class="pk-nav" data-go="-1" aria-label="Previous workflow">‹</button>
+      <button class="pk-cur" aria-haspopup="true" aria-expanded="false"><small>${esc(f.cat)} · ${cur() + 1} of ${FLOWS.length}</small><b>${esc(ex.name)}</b><i aria-hidden="true">▾</i></button>
+      <button class="pk-nav" data-go="1" aria-label="Next workflow">›</button>
+      <button class="pk-shuffle" title="Show a different workflow">⤮<span> Surprise me</span></button>
+      <span class="pk-apps" aria-label="Apps in this workflow">${appsOf(ex).map(a => `<i title="${esc(meta(a).t)}">${logo(a, 18)}</i>`).join('')}</span>
+      <div class="pk-menu" hidden>${CAT_ORDER.map(c => `<div class="pk-grp"><h5>${esc(c)}</h5>${FLOWS.filter(x => x.cat === c).map(x => `<button data-id="${x.ex.id}" class="${x.ex === ex ? 'on' : ''}"><span class="pk-lg">${appsOf(x.ex).slice(0, 5).map(a => logo(a, 15)).join('')}</span><b>${esc(x.ex.name)}</b><small>${ED[x.tool].name}</small></button>`).join('')}</div>`).join('')}</div>`;
     win.className = 'ed-window t-' + tool;
-    $('#edNote').textContent = ED[tool].note;
+    $('#edNote').textContent = ex.note || ED[tool].note;
     const nodes = ex.nodes;
     if (tool === 'zap') { nodes.forEach((n, i) => { n.x = 0; n.y = i * 104; }); W = 440; H = nodes.length * 104 - 28; }
     else { W = Math.max(...nodes.map(n => n.x)) + (tool === 'make' ? 150 : 170); H = 360; }
@@ -242,7 +337,7 @@ const ED = {
     world.style.width = W + 'px'; world.style.height = H + 'px';
     world.innerHTML = svg + nodes.map((n, i) => {
       const pos = `left:${n.x}px;top:${n.y}px`;
-      if (tool === 'n8n') return `<button class="en n8 ${n.trig ? 'trig' : ''}" data-i="${i}" style="${pos}"><span class="n8-face">${logo(n.ic, 40)}${n.trig ? '<i class="bolt">⚡</i>' : ''}<i class="ck">✓</i></span><span class="n8-cnt">1 item</span><span class="n8-lbl"><b>${esc(n.n)}</b><small>${esc(n.t)}</small></span></button>`;
+      if (tool === 'n8n') return `<button class="en n8 ${n.trig ? 'trig' : ''}" data-i="${i}" style="${pos}"><span class="n8-face${DARK.has(n.ic) ? ' lt' : ''}">${logo(n.ic, 40)}${n.trig ? '<i class="bolt">⚡</i>' : ''}<i class="ck">✓</i></span><span class="n8-cnt">1 item</span><span class="n8-lbl"><b>${esc(n.n)}</b><small>${esc(n.t)}</small></span></button>`;
       if (tool === 'make') { const m = meta(n.ic); return `<button class="en mk" data-i="${i}" style="${pos};--c:${m.c}"><span class="mk-face">${logo(n.ic, 40, 'white')}${n.trig ? '<i class="clock">⏱</i>' : ''}<i class="ops">1</i></span><span class="mk-lbl"><b>${esc(n.n)}</b><small>${esc(n.t)}</small><em>${i + 1}</em></span></button>`; }
       return `<button class="en zp" data-i="${i}" style="${pos}"><span class="zp-ic">${logo(n.ic, 26)}</span><span class="zp-txt"><small>${i + 1}. ${n.trig ? 'Trigger' : 'Action'} · ${esc(n.t)}</small><b>${esc(n.n)}</b></span><i class="ck">✓</i></button>`;
     }).join('');
@@ -271,10 +366,10 @@ const ED = {
     world.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px)) scale(${cam.s})`;
   }
   function showPanel(i) {
-    const n = ex.nodes[i], ran = world.querySelector(`.en[data-i="${i}"]`)?.classList.contains('done');
+    const n = ex.nodes[i], el = world.querySelector(`.en[data-i="${i}"]`), ran = !!el && (el.classList.contains('done') || el.classList.contains('running'));
     panel.innerHTML = `<div class="k">${ED[tool].name} · step ${ex._order.indexOf(i) + 1 || '–'} of ${ex._order.length}</div>
       <h4>${logo(n.ic, 20)} ${esc(n.n)}</h4><p>${esc(n.d)}</p>
-      <div class="k">${ran ? 'Output' : 'Waiting to run'}</div><pre>${ran ? esc(JSON.stringify(n.o, null, 2)) : '// keep scrolling to run this step'}</pre>`;
+      <div class="k">${ran ? (n.ui ? 'What happened in the app' : 'Output') : 'Waiting to run'}</div>${ran && n.ui ? snip(n) : `<pre>${ran ? esc(JSON.stringify(n.o, null, 2)) : '// keep scrolling to run this step'}</pre>`}`;
     fit();
   }
   function scrub(force) {
@@ -294,7 +389,9 @@ const ED = {
     foot.innerHTML = `${btn}<span class="f-stat ${r >= N ? 'ok' : r >= 0 ? 'run' : ''}">${esc(status)}</span>`;
   }
   scrubbers.push(f => scrub(f));
-  build();
+  let last = null; try { last = sessionStorage.getItem('ed-flow'); } catch (e) {}
+  const pool = FLOWS.filter(f => f.ex.id !== last);
+  go(pool[Math.floor(Math.random() * pool.length)]);
 })();
 
 /* ======================================================================
