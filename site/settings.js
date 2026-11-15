@@ -18,7 +18,7 @@
     whatsapp: '2348110117004',
     email: 'simeono.automation@gmail.com',
     upwork: 'https://www.upwork.com/freelancers/~012e9a6098279f78fc',
-    booking: '',
+    booking: 'https://calendly.com/ximeonleo/meet-with-d-xlntinnovator-simeon',
     hidden: []
   };
   /* sections the owner can switch off (id → label) */
