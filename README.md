@@ -12,7 +12,12 @@
 
 <br>
 
-<a href="https://wa.me/2348110117004"><img src="https://img.shields.io/badge/WhatsApp-Let's_build_together-FF4F1A?style=for-the-badge&logo=whatsapp&logoColor=white" alt="WhatsApp"></a>
+<a href="https://simeononabowale.netlify.app"><img src="https://img.shields.io/badge/▶_View_the_live_site-FF4F1A?style=for-the-badge" alt="View the live site"></a>
+<a href="https://calendly.com/simeono-automation/meet-with-d-xlntinnovator-simeon"><img src="https://img.shields.io/badge/Book_a_call-15140F?style=for-the-badge&logo=calendly&logoColor=F3EFE6" alt="Book a call"></a>
+
+<br>
+
+<a href="https://wa.me/2348110117004"><img src="https://img.shields.io/badge/WhatsApp-Message_me-15140F?style=for-the-badge&logo=whatsapp&logoColor=F3EFE6" alt="WhatsApp"></a>
 <a href="mailto:simeono.automation@gmail.com"><img src="https://img.shields.io/badge/Email-Send_a_brief-15140F?style=for-the-badge&logo=gmail&logoColor=F3EFE6" alt="Email"></a>
 <a href="https://www.upwork.com/freelancers/~012e9a6098279f78fc"><img src="https://img.shields.io/badge/Upwork-ID_verified-F3EFE6?style=for-the-badge&logo=upwork&logoColor=15140F" alt="Upwork"></a>
 
@@ -114,6 +119,10 @@
 
 <br>
 
+> **On the live site:** scroll through 13 example workflows (Shopify, Notion, GoHighLevel, monday.com, Slack, WhatsApp, Telegram and more) and watch each step run, with a preview of what happens in every app. [Open it →](https://simeononabowale.netlify.app/#replay)
+
+<br>
+
 ## ● Live with clients
 
 > Systems that are in daily use for real teams. Names are kept private, and every number comes from the running system.
@@ -164,16 +173,28 @@
 
 <br>
 
-## ✦ What I build, and what you get
+## ✦ AI workflow automation services, built around the result you want
 
-| | Service | What it covers |
+> I'm a freelance AI automation specialist. Pick the outcome you need: each one is a build I deliver, with error alerts, a handover guide and a walkthrough.
+
+| | Outcome | Service |
 |:-:|---|---|
-| `01` | **Document & data pipelines** | PDFs, contracts and forms read by AI, checked in code, turned into filled templates, sheets or CRM records |
-| `02` | **n8n workflow builds** | From one integration to multi-branch systems with retries, error workflows and alerts |
-| `03` | **AI agents & assistants** | WhatsApp, website and voice assistants that answer, qualify and book, with a human hand-off |
-| `04` | **GoHighLevel systems** | Pipelines, fields, tags, workflows, forms, contracts and email templates, set up and documented |
-| `05` | **Lead generation engines** | Research, qualification and personalised first lines at volume |
-| `06` | **Rescues & audits** | Automations that fail silently or were left behind: diagnosed, fixed and documented |
+| `01` | **Automate your pipeline** | GoHighLevel automation expert <sub>· Leads & CRM</sub> |
+| `02` | **Every deal gets a next step** | AI CRM automation services <sub>· Leads & CRM</sub> |
+| `03` | **Know who is worth calling** | Automated lead qualification system <sub>· Leads & CRM</sub> |
+| `04` | **Never miss a call** | AI voice agents for business <sub>· Conversations</sub> |
+| `05` | **Answer in seconds** | WhatsApp AI chatbot developer <sub>· Conversations</sub> |
+| `06` | **Open all night** | 24/7 AI customer service automation <sub>· Conversations</sub> |
+| `07` | **Workflows that survive real data** | n8n workflow automation expert <sub>· Workflows & integrations</sub> |
+| `08` | **Make your tools talk** | Custom API integration services <sub>· Workflows & integrations</sub> |
+| `09` | **Hand the busywork to software** | Business process automation with AI <sub>· Workflows & integrations</sub> |
+| `10` | **Leads from every channel, one place** | Omnichannel lead generation automation <sub>· Growth & rescue</sub> |
+| `11` | **Documents that fill themselves** | AI document automation <sub>· Growth & rescue</sub> |
+| `12` | **Fix what someone else left behind** | Automation rescue and audit <sub>· Growth & rescue</sub> |
+
+**By industry:** AI automation for real estate · AI automation for home services · Clinic booking AI automation
+
+> **Looking for an AI automation agency or a no-code automation agency?** You get the same systems from one freelance specialist: you talk to the person who builds it, it runs on your own accounts, and you own everything at the end.
 
 <br>
 
