@@ -17,6 +17,8 @@
 [[headers]]
   for = "/*"
   [headers.values]
+    # TEMPORARY while the site lives on simeononabowale.netlify.app. DELETE this line the day simeononabowale.me is connected.
+    X-Robots-Tag = "noindex"
     X-Content-Type-Options = "nosniff"
     Referrer-Policy = "strict-origin-when-cross-origin"
 
