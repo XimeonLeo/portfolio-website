@@ -33,6 +33,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css">
 <link rel="stylesheet" href="motion.css">
+<link rel="stylesheet" href="chatmock.css">
 <script src="settings.js"></script>
 </head>
 <body>
@@ -223,7 +224,7 @@
         <p class="try-lede">The demo sets itself up for your type of business. Ask it a question, book a slot or place an order, the way your customers would.</p>
         <ul class="try-points">
           <li><span class="tp-ic">1</span>Pick your type of business</li>
-          <li><span class="tp-ic">2</span>Chat on WhatsApp, Instagram, your website or by phone</li>
+          <li><span class="tp-ic">2</span>Chat on WhatsApp, Instagram, Messenger, Telegram, your website or by phone</li>
           <li><span class="tp-ic">3</span>Watch the booking and the lead appear behind the scenes</li>
         </ul>
         <div class="try-cta">
@@ -233,20 +234,20 @@
         <p class="try-fine">Opens right here · no sign-up · works on your phone</p>
       </div>
 
-      <a class="try-visual" href="chatbot-demo/" data-demo="chat" aria-label="Open the live chatbot demo">
-        <div class="phone" aria-hidden="true">
-          <div class="ph-top"><span class="ph-av">AI</span><div><b>Your business</b><small>AI assistant · online</small></div></div>
-          <div class="ph-chat" id="phChat">
-            <span class="b in">Hi! Are you open on Sunday?</span>
-            <span class="b out">We are, 10am to 4pm. Want me to book you in?</span>
-            <span class="b in">Yes please, 2pm</span>
-            <span class="b out">Done ✓ You're booked for Sunday at 2pm.</span>
+      <div class="try-visual" id="chatMock">
+        <div class="iphone" data-p="whatsapp">
+          <span class="ip-btn b1"></span><span class="ip-btn b2"></span><span class="ip-btn b3"></span><span class="ip-btn b4"></span>
+          <div class="ip-screen">
+            <div class="ip-status"><span class="ip-time">9:41</span><span class="ip-island"></span><span class="ip-icons"><svg viewBox="0 0 18 12" width="17" height="11"><rect x="0" y="8" width="3" height="4" rx="1"/><rect x="5" y="5.5" width="3" height="6.5" rx="1"/><rect x="10" y="3" width="3" height="9" rx="1"/><rect x="15" y="0" width="3" height="12" rx="1"/></svg><svg viewBox="0 0 16 12" width="15" height="11"><path d="M8 2.2c2.3 0 4.4.9 6 2.4l1.2-1.3A10.4 10.4 0 0 0 8 .4 10.4 10.4 0 0 0 .8 3.3L2 4.6a8.6 8.6 0 0 1 6-2.4zm0 3.6c1.3 0 2.5.5 3.4 1.3l1.2-1.3A6.8 6.8 0 0 0 8 4a6.8 6.8 0 0 0-4.6 1.8l1.2 1.3A5 5 0 0 1 8 5.8zm0 3.5L6 11.4 8 13.5l2-2.1z"/></svg><span class="ip-bat"><i></i></span></span></div>
+            <div class="cm-app"></div>
+            <span class="ip-home"></span>
           </div>
-          <div class="ph-input"><span>Type a message…</span><i>➤</i></div>
         </div>
-        <div class="try-tag tg1"><span class="ic">⚡</span><div>Replied in 2 seconds<small>at 11:48 pm</small></div></div>
-        <div class="try-tag tg2"><span class="ic ok">✓</span><div>Booking added<small>Sunday · 2:00 pm</small></div></div>
-      </a>
+        <div class="cm-tabs" role="tablist" aria-label="Pick a chat app"></div>
+        <button class="cm-live" type="button" data-demo="chat">This is a replay. <b>Chat with the live one →</b></button>
+        <div class="try-tag tg1"><span class="ic">⚡</span><div><b>Replied in 2 seconds</b><small>at 11:48 pm</small></div></div>
+        <div class="try-tag tg2"><span class="ic ok">✓</span><div><b>Booking added</b><small>Thu · 10:30 am</small></div></div>
+      </div>
     </div>
   </div>
 </section>
@@ -678,5 +679,6 @@
 <script src="app.js"></script>
 <script src="motion.js" defer></script>
 <script src="demo.js"></script>
+<script src="chatmock.js" defer></script>
 </body>
 </html>
