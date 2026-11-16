@@ -498,3 +498,4 @@
 .ed-foot .f-stat{flex:1 1 auto;min-width:0;text-align:right}
 @media (max-width:1060px){ .t-n8n .ed-deco .dz{display:none} }
 .p-st{white-space:nowrap}
+.t-make .c-mid>b:first-child{background:#6d00cc;color:#fff}
