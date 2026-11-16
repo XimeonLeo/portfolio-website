@@ -101,7 +101,7 @@
 .ed-foot{display:flex;align-items:center;gap:14px;padding:10px 14px;border-top:1px solid;font-size:13px}
 .f-btn{padding:8px 14px;border-radius:8px;font-weight:700;font-size:13px;white-space:nowrap}
 .f-stat{font:500 12.5px var(--mono);opacity:.75;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.f-stat.run{opacity:1;color:#F2B544}.f-stat.ok{opacity:1;color:#3DDC97}
+.f-stat.is-run{opacity:1;color:#F2B544}.f-stat.is-ok{opacity:1;color:#3DDC97}
 .ed-progress{height:3px;background:var(--night-line);border-radius:3px;margin-top:12px;overflow:hidden}
 .ed-progress i{display:block;height:100%;background:var(--signal);transform-origin:left;transform:scaleX(0)}
 .ed-note{margin:8px 0 0;font-size:12.5px;color:var(--night-mute)}
@@ -156,7 +156,7 @@
 .t-make .ed-foot{background:#fff;border-color:#ece6f5}
 .f-btn.f-mk{width:44px;height:44px;border-radius:50%;background:#6D00CC;color:#fff;display:grid;place-items:center;padding:0;font-size:15px}
 .f-sub{font-weight:700;margin-left:-6px}
-.t-make .f-stat.run{color:#9a5b00}.t-make .f-stat.ok{color:#14853f}
+.t-make .f-stat.is-run{color:#9a5b00}.t-make .f-stat.is-ok{color:#14853f}
 
 /* --- Zapier look --- */
 .t-zap{background:#fffdf9;color:#201515}
@@ -181,7 +181,7 @@
 .t-zap .ed-panel pre{background:#faf6ef;color:#4a2a12}
 .t-zap .ed-foot{background:#fff;border-color:#ebe5dc}
 .f-btn.f-zp{background:#201515;color:#fff}
-.t-zap .f-stat.run{color:#b04000}.t-zap .f-stat.ok{color:#14853f}
+.t-zap .f-stat.is-run{color:#b04000}.t-zap .f-stat.is-ok{color:#14853f}
 
 /* ============ GLOBE ============ */
 .integrations{background:radial-gradient(ellipse 80% 60% at 50% 55%,#1d1712 0%,var(--night) 70%);color:var(--night-text);padding:120px 0 100px;overflow:hidden}
@@ -416,7 +416,7 @@
 .t-n8n .f-btn.f-n8{background:#1f2230;color:#fff;border-radius:999px;padding:9px 18px;box-shadow:0 6px 16px -8px rgba(31,34,48,.6)}
 .t-n8n.busy .f-btn.f-n8{background:#ff6d5a}
 .t-n8n .f-stat{margin-left:auto;color:#6b7086;opacity:1}
-.t-n8n .f-stat.run{color:#d9480f}.t-n8n .f-stat.ok{color:#1c9c5e}
+.t-n8n .f-stat.is-run{color:#d9480f}.t-n8n .f-stat.is-ok{color:#1c9c5e}
 
 /* ---------- Make.com ---------- */
 .t-make .ed-chrome{background:#fff}
@@ -460,9 +460,9 @@
 .ed-panel .k{display:flex;align-items:center;gap:8px}
 .p-follow{margin-left:auto;font:600 10.5px var(--mono);letter-spacing:.04em;text-transform:none;border:1px solid currentColor;border-radius:999px;background:none;color:inherit;padding:3px 9px;cursor:pointer;opacity:.9}
 .p-st{align-self:flex-start;display:inline-flex;align-items:center;gap:6px;font:600 11px var(--mono);border-radius:999px;padding:4px 9px;background:rgba(127,127,127,.14)}
-.p-st.ok{background:rgba(44,182,115,.16);color:#1c9c5e}
-.p-st.run{background:rgba(255,109,90,.16);color:#d9480f}
-.p-st.run i{width:9px;height:9px;border-radius:50%;border:2px solid currentColor;border-right-color:transparent;animation:ed-spin .7s linear infinite}
+.p-st.is-ok{background:rgba(44,182,115,.16);color:#1c9c5e}
+.p-st.is-run{background:rgba(255,109,90,.16);color:#d9480f}
+.p-st.is-run i{width:9px;height:9px;border-radius:50%;border:2px solid currentColor;border-right-color:transparent;animation:ed-spin .7s linear infinite}
 .p-tabs{display:flex;gap:2px;padding:3px;border-radius:9px;background:rgba(127,127,127,.14)}
 .p-tabs button{flex:1;border:0;background:none;color:inherit;font:600 12px var(--sans);padding:6px 4px;border-radius:7px;cursor:pointer;opacity:.7}
 .p-tabs button.on{background:#fff;color:#1f2230;opacity:1;box-shadow:0 1px 2px rgba(0,0,0,.14)}
@@ -494,7 +494,7 @@
   .c-tag,.c-btn,.c-state{display:none}
   .ed-toast{left:12px;right:12px;bottom:auto;top:12px;text-align:center}
 }
-@media (prefers-reduced-motion:reduce){ .spin,.mk.running .ring,.busy .f-ic,.f-stat .dot,.p-st.run i{animation:none} }
+@media (prefers-reduced-motion:reduce){ .spin,.mk.running .ring,.busy .f-ic,.f-stat .dot,.p-st.is-run i{animation:none} }
 .ed-foot .f-stat{flex:1 1 auto;min-width:0;text-align:right}
 @media (max-width:1060px){ .t-n8n .ed-deco .dz{display:none} }
 .p-st{white-space:nowrap}

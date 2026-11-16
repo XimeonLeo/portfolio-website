@@ -397,7 +397,7 @@ function snip(n) {
     const n = ex.nodes[i], el = world.querySelector(`.en[data-i="${i}"]`), st = !el ? 'idle' : el.classList.contains('running') ? 'run' : el.classList.contains('done') ? 'done' : 'idle';
     const step = ex._order.indexOf(i), prev = ex._edges.filter(e => e[1] === i).map(e => ex.nodes[e[0]].n), next = ex._edges.filter(e => e[0] === i).map(e => ex.nodes[e[1]].n), o = outOf(n);
     panel._i = i;
-    const badge = st === 'run' ? '<span class="p-st run"><i></i>Running now</span>' : st === 'done' ? '<span class="p-st ok">✓ Ran</span>' : '<span class="p-st">Not run yet</span>';
+    const badge = st === 'run' ? '<span class="p-st is-run"><i></i>Running now</span>' : st === 'done' ? '<span class="p-st is-ok">✓ Ran</span>' : '<span class="p-st">Not run yet</span>';
     let body;
     if (tab === 'schema') body = `<table class="p-schema"><tr><th>Field</th><th>Type</th><th>Example</th></tr>${schemaOf(o).map(([k, t, v]) => `<tr><td>${esc(k)}</td><td>${esc(t)}</td><td>${esc(String(v).slice(0, 60))}</td></tr>`).join('')}</table><p class="p-hint">The fields this step passes to the next one.</p>`;
     else if (tab === 'json') body = `<pre>${esc(JSON.stringify(o, null, 2))}</pre>`;
@@ -429,7 +429,7 @@ function snip(n) {
     const btn = tool === 'n8n' ? `<button type="button" class="f-btn f-n8" data-run><i class="f-ic">${busy ? '' : '⚗'}</i>${label}</button>`
       : tool === 'make' ? `<button type="button" class="f-btn f-mk" data-run aria-label="${label}"><i class="f-ic">${busy ? '' : '▶'}</i></button><span class="f-sub"><b>${label}</b><small>Immediately as data arrives</small></span>`
       : `<button type="button" class="f-btn f-zp" data-run><i class="f-ic"></i>${label}</button>`;
-    foot.innerHTML = `${tool === 'n8n' ? '<span class="f-logs">Logs</span>' : ''}${btn}<span class="f-stat ${r >= N ? 'ok' : busy ? 'run' : ''}">${busy ? '<i class="dot"></i>' : r >= N ? '✓ ' : ''}${esc(status)}</span>`;
+    foot.innerHTML = `${tool === 'n8n' ? '<span class="f-logs">Logs</span>' : ''}${btn}<span class="f-stat ${r >= N ? 'is-ok' : busy ? 'is-run' : ''}">${busy ? '<i class="dot"></i>' : r >= N ? '✓ ' : ''}${esc(status)}</span>`;
     if (r >= N && was !== null && was < N && was >= 0) { toast.textContent = tool === 'n8n' ? '✓ Workflow executed successfully' : tool === 'make' ? '✓ The scenario run was completed' : '✓ Test was successful'; toast.classList.add('on'); clearTimeout(toast._t); toast._t = setTimeout(() => toast.classList.remove('on'), 2600); }
     else if (r < N) toast.classList.remove('on');
   }
