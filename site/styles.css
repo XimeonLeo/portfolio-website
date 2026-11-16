@@ -668,3 +668,29 @@ button.try-visual{border:0;background:none;font:inherit;cursor:pointer}
 @keyframes mm-in{from{opacity:0;transform:translateY(6px)}}
 
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* ---------- nav: "Start a project" docks out of the bar on purpose ---------- */
+@media (min-width:861px){
+  .nav-bar{padding-right:0}
+  .nav .btn.nav-cta{position:relative;margin-right:-22px;padding:13px 22px;background:var(--ink);border-color:var(--ink);color:var(--paper);
+    box-shadow:0 0 0 5px color-mix(in srgb,var(--paper) 88%,transparent),0 14px 30px -12px rgba(255,79,26,.65)}
+  .nav .btn.nav-cta::before{content:"";position:absolute;inset:-5px;border-radius:999px;padding:1.5px;pointer-events:none;
+    background:conic-gradient(from var(--bl-ang,0deg),transparent 0 70%,#FF4F1A 85%,#FFC39E 92%,transparent 100%);
+    -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;animation:nav-orbit 4s linear infinite}
+  .nav .btn.nav-cta:hover{background:var(--signal);border-color:var(--signal);color:#fff}
+  .nav .btn.nav-cta .arr{display:inline-block;transition:transform .25s}
+  .nav .btn.nav-cta:hover .arr{transform:translateX(3px)}
+}
+@property --bl-ang{syntax:'<angle>';inherits:false;initial-value:0deg}
+@keyframes nav-orbit{to{--bl-ang:360deg}}
+@media (min-width:861px) and (max-width:1400px){ .nav-links{gap:0} .nav-links a{padding:8px 8px;font-size:13.5px} }
+@media (prefers-reduced-motion:reduce){ .nav .btn.nav-cta::before{animation:none} }
+/* nav between phone and wide desktop: links fold into the menu, the docked button stays */
+@media (min-width:861px) and (max-width:1180px){
+  .nav-links{display:none}
+  .menu-btn{display:grid;place-items:center;margin-left:auto;order:1}
+  .nav .btn.nav-cta{order:2}
+  .nav.menu .nav-bar{border-radius:24px;flex-wrap:wrap}
+  .nav.menu .nav-links{display:flex;flex-direction:column;width:100%;order:3;margin:6px 0 4px}
+  .nav.menu .nav-links a{padding:12px;font-size:15px}
+}

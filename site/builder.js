@@ -59,7 +59,21 @@ const EXAMPLES = [
   'When someone fills my website form, score the lead with AI, add them to GoHighLevel and text them on WhatsApp',
   'Every morning, check unpaid invoices in QuickBooks and chase them by email',
   'When an email with a receipt arrives in Gmail, read it with AI and log it in Airtable',
+  'When a patient books on Calendly, add them to HubSpot and send a WhatsApp reminder the day before',
+  'When a deal is marked Won in monday.com, create a Google Drive folder and post in Slack',
+  'When a Facebook lead comes in, reply on WhatsApp in seconds and add them to GoHighLevel',
+  'When a Stripe payment succeeds, send a receipt by email and add the client to Notion',
+  'Every Monday, summarise last week\'s new leads from HubSpot and send it to me on Telegram',
+  'When a Typeform is submitted, classify the request with AI and create a Trello card',
+  'When a contract PDF lands in Google Drive, read it with AI and add the key dates to Google Calendar',
+  'When an Instagram message asks about prices, reply with AI and log the lead in Airtable',
+  'When a WooCommerce order is over $200, thank the customer on WhatsApp and alert the team on Discord',
+  'When a Zoom call ends, summarise it with AI and save the notes in Notion',
+  'If a lead in GoHighLevel has not replied after 2 days, follow up by SMS',
+  'When stock in Shopify drops below 5, create a reorder task in monday.com and email the supplier',
 ];
+const SHORT = e => e.split(',')[0] + '…';
+const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
 
 function plan(text) {
   const t = ' ' + text.toLowerCase().replace(/[’']/g, "'") + ' ';
@@ -95,8 +109,31 @@ const icon = (k, n) => TILE[k] ? `<span class="bl-tile" style="background:${TILE
 
 /* ---------- interface ---------- */
 const form = $('.bl-form'), input = $('#blText'), out = $('.bl-out'), chips = $('.bl-chips');
-chips.innerHTML = EXAMPLES.map((e, i) => `<button type="button" data-ex="${i}">${esc(e.split(',')[0])}…</button>`).join('');
-chips.onclick = e => { const b = e.target.closest('[data-ex]'); if (!b) return; input.value = EXAMPLES[+b.dataset.ex]; input.focus(); form.requestSubmit(); };
+let deck = shuffle(EXAMPLES.map((_, i) => i));
+function dealChips() {
+  if (deck.length < 4) deck = deck.concat(shuffle(EXAMPLES.map((_, i) => i).filter(i => !deck.includes(i))));
+  const hand = deck.splice(0, 4);
+  chips.innerHTML = hand.map((i, k) => `<button type="button" data-ex="${i}" style="--d:${k * 60}ms">${esc(SHORT(EXAMPLES[i]))}</button>`).join('') + '<button type="button" class="bl-more" aria-label="Show other ideas">↻ More ideas</button>';
+}
+dealChips();
+chips.onclick = e => {
+  if (e.target.closest('.bl-more')) { dealChips(); return; }
+  const b = e.target.closest('[data-ex]'); if (!b) return; input.value = EXAMPLES[+b.dataset.ex]; input.focus(); form.requestSubmit();
+};
+/* the placeholder types out a different idea every few seconds while the box is empty */
+(() => {
+  const base = 'e.g. ', order = shuffle(EXAMPLES); let n = 0, timer;
+  const typeOne = () => {
+    if (input.value || document.activeElement === input && input.value) return later(2500);
+    const full = order[n++ % order.length];
+    if (reduce) { input.placeholder = base + full; return later(4500); }
+    let i = 0;
+    const step = () => { if (input.value) return later(2500); input.placeholder = base + full.slice(0, i) + (i < full.length ? '▍' : ''); if (i++ < full.length) timer = setTimeout(step, 22 + Math.random() * 30); else later(2600); };
+    step();
+  };
+  const later = ms => { clearTimeout(timer); timer = setTimeout(typeOne, ms); };
+  new IntersectionObserver(es => es.forEach(x => x.isIntersecting ? later(400) : clearTimeout(timer))).observe(input);
+})();
 input.addEventListener('keydown', e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey || !e.shiftKey)) { e.preventDefault(); form.requestSubmit(); } });
 let job = 0;
 form.onsubmit = async e => {
@@ -107,20 +144,37 @@ form.onsubmit = async e => {
   const id = ++job, { steps, known, hours } = plan(text), sleep = ms => new Promise(r => setTimeout(r, reduce ? 0 : ms));
   root.classList.add('has-out'); out.hidden = false;
   const btn = $('.bl-go'); btn.disabled = true; btn.classList.add('busy');
-  out.innerHTML = `<div class="bl-canvas" aria-live="polite">
+  const apps = [...new Set(steps.map(x => x.k))];
+  if (!reduce) {
+    const box = $('.bl-box');
+    out.innerHTML = `<div class="bl-forge" aria-live="polite"><div class="bf-grid"></div><div class="bf-beam"></div>
+      <div class="bf-core"><span class="bf-orb"></span>${apps.map((k, i) => `<span class="bf-app" style="--a:${(360 / apps.length) * i}deg;--i:${i}">${icon(k, 30)}</span>`).join('')}</div>
+      <p class="bf-msg">Reading your request…</p><div class="bf-bar"><i></i></div></div>`;
+    out.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    const msg = $('.bf-msg', out), forge = $('.bl-forge', out);
+    const lines = ['Reading your request…', `Found ${apps.filter(k => NAME[k]).length || 'your'} app${apps.filter(k => NAME[k]).length === 1 ? '' : 's'}…`, 'Wiring the steps together…', 'Adding the safety net…'];
+    for (let i = 0; i < lines.length; i++) { msg.textContent = lines[i]; msg.classList.remove('in'); void msg.offsetWidth; msg.classList.add('in'); forge.style.setProperty('--p', (i + 1) / lines.length); await sleep(620); if (id !== job) return; }
+    forge.classList.add('charge'); await sleep(520); if (id !== job) return;
+    forge.classList.add('boom'); box.classList.add('shake');
+    const burst = document.createElement('div'); burst.className = 'bf-burst';
+    burst.innerHTML = Array.from({ length: 28 }, (_, i) => `<i style="--r:${Math.random() * 360}deg;--d:${120 + Math.random() * 220}px;--s:${.5 + Math.random()}"></i>`).join('');
+    forge.appendChild(burst);
+    await sleep(650); box.classList.remove('shake'); if (id !== job) return;
+  }
+  out.innerHTML = `<div class="bl-canvas reveal" aria-live="polite">
       <div class="bl-bar"><span>${logo('n8n', 16)}<b>New workflow</b></span><span class="bl-state"><i></i><em>Reading your request…</em></span></div>
       <div class="bl-flow"></div>
     </div>
     <aside class="bl-plan"><p class="k">The plan</p><ol></ol><div class="bl-sum" hidden></div></aside>`;
   const flow = $('.bl-flow', out), list = $('.bl-plan ol', out), state = $('.bl-state em', out);
   out.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'nearest' });
-  await sleep(700); if (id !== job) return;
+  await sleep(reduce ? 0 : 250); if (id !== job) return;
   state.textContent = 'Building…';
   for (let i = 0; i < steps.length; i++) {
     const s = steps[i];
     flow.insertAdjacentHTML('beforeend', `${i ? '<i class="bl-wire"></i>' : ''}<div class="bl-node${s.trig ? ' trig' : ''}${s.extra ? ' extra' : ''}" data-i="${i}"><span class="bl-face">${icon(s.k, 34)}${s.trig ? '<i class="bolt">⚡</i>' : ''}<i class="ck">✓</i></span><b>${esc(s.n)}</b><small>${esc(s.t)}</small></div>`);
     list.insertAdjacentHTML('beforeend', `<li data-i="${i}"><span class="bl-li-ic">${icon(s.k, 20)}</span><div><b>${esc(s.n)}</b><p>${esc(s.d)}</p></div></li>`);
-    await sleep(520); if (id !== job) return;
+    await sleep(300); if (id !== job) return;
   }
   state.textContent = 'Test run…';
   for (let i = 0; i < steps.length; i++) {
