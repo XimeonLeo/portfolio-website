@@ -16,6 +16,7 @@ const url = v => {
 // Only these fields can ever be saved, each one checked. Anything else is dropped.
 const FIELDS = {
   name: str(60), initials: str(3), role: str(60),
+  photo: v => (typeof v === 'string' && v ? link(v) || undefined : undefined), // an uploaded file (/api/media/…) or a file in assets/
   accent: hex, paper: hex, ink: hex, night: hex,
   showAvail: v => (typeof v === 'boolean' ? v : undefined),
   avail: str(80), heroTitle: str(120), heroSub: str(140), heroLede: str(600), heroFor: str(160),

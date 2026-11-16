@@ -30,7 +30,7 @@ http.createServer(async (req, res) => {
     const body = Buffer.concat(chunks);
     const request = new Request('http://localhost:' + PORT + req.url, { method: req.method, headers: req.headers, body: ['GET', 'HEAD'].includes(req.method) || !body.length ? undefined : body });
     const r = await api.handle(request, req.socket.remoteAddress);
-    res.writeHead(r.status, Object.fromEntries(r.headers)); return res.end(await r.text());
+    res.writeHead(r.status, Object.fromEntries(r.headers)); return res.end(Buffer.from(await r.arrayBuffer()));
   }
   let file = path.join(ROOT, pathname);
   if (!file.startsWith(ROOT)) { res.writeHead(403); return res.end(); }

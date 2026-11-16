@@ -37,6 +37,12 @@ input[type=text],input[type=password],input[type=email],input[type=url],input[ty
 textarea{resize:vertical;min-height:74px;line-height:1.45}
 .err{color:#FF8A6B;font-size:13.5px;min-height:20px;margin:10px 0 0}
 .login-card .btn{width:100%;margin-top:16px;padding:13px}
+.login-card .back{display:block;text-align:center;margin-top:14px;color:var(--mute);font-size:13.5px;text-decoration:none}
+.login-card .back:hover{color:var(--text)}
+.photo-row{display:flex;gap:14px;align-items:center}
+.photo-row img{width:76px;height:95px;object-fit:cover;object-position:50% 18%;border-radius:12px;border:1px solid var(--line);background:var(--bg);flex:none}
+.photo-row .btn{padding:8px 13px;font-size:13px;margin:0 6px 8px 0;cursor:pointer}
+.photo-row .hint{margin:0 !important}
 
 /* editor */
 .app{display:grid;grid-template-columns:400px minmax(0,1fr);height:100%}
@@ -156,6 +162,7 @@ select{width:100%;background:var(--bg);border:1px solid var(--line);border-radiu
     <input type="password" id="pw" name="password" autocomplete="current-password" required autofocus>
     <button class="btn primary" id="loginBtn" type="submit">Open the door</button>
     <p class="err" id="loginErr" role="alert"></p>
+    <a class="back" href="/">← Back to the site</a>
   </form>
 </main>
 
@@ -278,6 +285,7 @@ $('#form').innerHTML = `
   <div class="group"><h2>Name</h2><p class="hint">Shown in the top bar, the About photo and the footer.</p>
     <div class="row2">${input('name', 'Your name', { max: 60 })}${input('initials', 'Logo letters', { max: 3 })}</div>
     ${input('role', 'Title (footer)', { max: 60 })}
+    <div class="field"><label>Your photo</label><div class="photo-row"><img id="photoPrev" alt="Current photo"><div><label class="btn"><input type="file" id="photoFile" accept="image/jpeg,image/png,image/webp" hidden>Change photo</label><button type="button" class="btn" id="photoReset">Use the original</button><p class="hint" id="photoHint">Shown at the top of the site and in About. A portrait (taller than wide) works best.</p></div></div></div>
   </div>
   <div class="group"><h2>Colours</h2><p class="hint">Pick a ready-made set, or choose each colour yourself.</p>
     <div class="presets">${PRESETS.map(([n, c], i) => `<button type="button" class="sw" data-preset="${i}"><i><b style="background:${c.paper}"></b><b style="background:${c.accent}"></b><b style="background:${c.night}"></b></i>${n}</button>`).join('')}</div>
@@ -310,7 +318,16 @@ function fill() {
   });
   document.querySelectorAll('[data-sec]').forEach(el => el.checked = !state.hidden.includes(el.dataset.sec));
   document.querySelectorAll('[data-hex]').forEach(el => el.textContent = state[el.dataset.hex]);
+  const pv = $('#photoPrev'); if (pv) pv.src = /^assets\//.test(state.photo) ? '../' + state.photo : state.photo;
 }
+document.addEventListener('change', async e => {
+  if (e.target.id !== 'photoFile' || !e.target.files[0]) return;
+  const hint = $('#photoHint'), was = hint.textContent; hint.textContent = 'Uploading…';
+  try { state.photo = await upload(await shrink(e.target.files[0], 1400)); fill(); changed(); hint.textContent = 'New photo in the preview. It goes live when you save.'; }
+  catch (err) { hint.textContent = err.message === 'auth' ? was : err.message; }
+  e.target.value = '';
+});
+document.addEventListener('click', e => { if (e.target.id === 'photoReset') { state.photo = D.photo; fill(); changed(); } });
 function push() { if (frameReady) $('#frame').contentWindow.postMessage({ type: 'site-preview', settings: state }, location.origin); }
 function status(msg, cls) { const s = $('#status'); s.textContent = msg; s.className = 'status ' + (cls || ''); }
 const dirty = () => JSON.stringify(diff(state)) !== JSON.stringify(saved);

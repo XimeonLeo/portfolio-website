@@ -5,6 +5,7 @@
     name: 'Simeon Onabowale',
     initials: 'SO',
     role: 'AI automation engineer',
+    photo: 'assets/simeon.jpg',
     accent: '#FF4F1A',
     paper: '#F3EFE6',
     ink: '#15140F',
@@ -61,6 +62,7 @@
     var vals = { name: s.name, initials: s.initials, role: s.role, avail: s.avail, heroTitle: s.heroTitle, heroSub: s.heroSub, heroLede: s.heroLede, heroFor: s.heroFor,
       email: s.email, waText: 'Fastest reply · ' + prettyPhone(s.whatsapp) };
     [].forEach.call(document.querySelectorAll('[data-s]'), function (el) { var v = vals[el.getAttribute('data-s')]; if (v != null) text(el, v); });
+    [].forEach.call(document.querySelectorAll('[data-s-img="photo"]'), function (im) { if (s.photo && im.getAttribute('src') !== s.photo) im.setAttribute('src', s.photo); });
     var badge = document.getElementById('availBadge'); if (badge) badge.style.display = s.showAvail && s.avail ? '' : 'none';
     link('a[href^="https://wa.me/"]', 'wa', 'https://wa.me/' + s.whatsapp);
     link('a[href^="mailto:"]', 'mail', 'mailto:' + s.email);

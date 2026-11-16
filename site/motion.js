@@ -32,7 +32,7 @@ function logo(s, size = 24, mode = 'brand') {
   const fs = Math.round(size * (m.txt.length > 2 ? .36 : .5));
   return `<span class="lg lg-txt" style="width:${size}px;height:${size}px;font-size:${fs}px;background:${mode === 'white' ? 'transparent' : m.c};color:#fff">${m.txt}</span>`;
 }
-window.logo = logo;
+window.logo = logo; window.pfMeta = meta;
 
 /* ---------- scroll engine ---------- */
 const scrubbers = [];
@@ -283,12 +283,15 @@ function snip(n) {
 (() => {
   const sec = $('#replay'); if (!sec) return;
   const toolsEl = $('#edTools'), exEl = $('#edExamples'), win = $('#edWindow'), chrome = $('#edChrome'), canvas = $('#edCanvas'), world = $('#edWorld'), panel = $('#edPanel'), foot = $('#edFoot'), prog = $('#edProg');
-  let tool = 'n8n', ex = ED.n8n.examples[0], W = 1100, H = 360, lastR = null, picked = null;
+  const deco = document.createElement('div'); deco.className = 'ed-deco'; deco.setAttribute('aria-hidden', 'true'); canvas.appendChild(deco);
+  const toast = document.createElement('div'); toast.className = 'ed-toast'; toast.setAttribute('role', 'status'); canvas.appendChild(toast);
+  let tool = 'n8n', ex = ED.n8n.examples[0], W = 1100, H = 360, lastR = null, picked = null, tab = 'explain';
+  let timer = null, manual = false, held = null; // held = the scroll step at which a button-run finished; it stays on screen until the visitor scrolls on
   toolsEl.innerHTML = Object.entries(ED).map(([k, v]) => `<button role="tab" data-k="${k}">${logo(v.logo, 18)}<span>${v.name}</span></button>`).join('');
-  toolsEl.onclick = e => { const b = e.target.closest('button'); if (b) { tool = b.dataset.k; ex = ED[tool].examples[0]; build(); } };
+  toolsEl.onclick = e => { const b = e.target.closest('button'); if (b) go(FLOWS.find(f => f.tool === b.dataset.k)); };
   exEl.className = 'ed-pick';
   const cur = () => FLOWS.findIndex(f => f.ex === ex);
-  const go = f => { tool = f.tool; ex = f.ex; try { sessionStorage.setItem('ed-flow', ex.id); } catch (e) {} build(); };
+  const go = f => { stop(); tool = f.tool; ex = f.ex; try { sessionStorage.setItem('ed-flow', ex.id); } catch (e) {} build(); };
   exEl.onclick = e => {
     const b = e.target.closest('button'); if (!b) return;
     const menu = $('.pk-menu', exEl);
@@ -300,6 +303,8 @@ function snip(n) {
   addEventListener('click', e => { const menu = $('.pk-menu', exEl); if (menu && !menu.hidden && !e.target.closest('.ed-pick')) { menu.hidden = true; $('.pk-cur', exEl).setAttribute('aria-expanded', 'false'); } });
   addEventListener('keydown', e => { const menu = $('.pk-menu', exEl); if (e.key === 'Escape' && menu && !menu.hidden) { menu.hidden = true; $('.pk-cur', exEl).focus(); } });
   world.onclick = e => { const n = e.target.closest('.en'); if (n) { picked = +n.dataset.i; showPanel(picked); } };
+  foot.onclick = e => { if (e.target.closest('[data-run]')) (manual ? stop(true) : runNow()); };
+  panel.onclick = e => { const b = e.target.closest('[data-tab]'); if (b) { tab = b.dataset.tab; showPanel(panel._i); } else if (e.target.closest('[data-unpick]')) { picked = null; showPanel(panel._cur); } };
 
   function build() {
     picked = null; lastR = null;
@@ -319,9 +324,13 @@ function snip(n) {
     const order = ex.order || nodes.map((_, i) => i);
     const edges = ex.edges || nodes.slice(1).map((_, i) => [i, i + 1]);
     ex._order = order; ex._edges = edges;
-    if (tool === 'n8n') chrome.innerHTML = `<span class="c-crumb">${logo('n8n', 18)}<span>Personal /</span><b>${esc(ex.name)}</b></span><span class="c-mid"><b>Editor</b><span>Executions</span></span><span class="c-act">Active <i class="sw on"></i></span>`;
-    else if (tool === 'make') chrome.innerHTML = `<span class="c-crumb">${logo('make', 18)}<b>${esc(ex.name)}</b></span><span class="c-mid"><span>Scenario</span><span>History</span></span><span class="c-act">ON <i class="sw on"></i></span>`;
-    else chrome.innerHTML = `<span class="c-crumb">${logo('zapier', 18)}<b>${esc(ex.name)}</b></span><span class="c-mid"><span class="zp-pub">Published</span></span><span class="c-act"><span class="zp-btn">Publish</span></span>`;
+    // the bar across the top of each editor, laid out like the real product
+    if (tool === 'n8n') chrome.innerHTML = `<span class="c-crumb">${logo('n8n', 18)}<span>Personal</span><i>/</i><b>${esc(ex.name)}</b><em class="c-tag">+ Add tag</em></span><span class="c-mid"><b>Editor</b><span>Executions</span><span>Evaluations</span></span><span class="c-act"><span class="c-state">Active</span><i class="sw on"></i><span class="c-btn">Share</span><span class="c-btn solid">Saved</span></span>`;
+    else if (tool === 'make') chrome.innerHTML = `<span class="c-crumb"><span class="c-back">‹</span>${logo('make', 18)}<b>${esc(ex.name)}</b></span><span class="c-mid"><b>Diagram</b><span>History</span><span>Incomplete executions</span></span><span class="c-act"><span class="c-state">Scheduling</span><i class="sw on"></i><span class="c-btn">Share</span></span>`;
+    else chrome.innerHTML = `<span class="c-crumb"><span class="c-home">⌂</span>${logo('zapier', 18)}<span>Zaps</span><i>/</i><b>${esc(ex.name)}</b></span><span class="c-mid"><span class="zp-pub">● Published</span></span><span class="c-act"><span class="c-btn">Test run</span><span class="zp-btn">Publish</span></span>`;
+    deco.innerHTML = tool === 'n8n' ? '<div class="dz"><i>⤢</i><i>＋</i><i>－</i><i>⌖</i></div><div class="dr"><i>＋</i><i>⌕</i><i>▱</i><i>◫</i><i>✦</i></div>'
+      : tool === 'make' ? '<div class="dm"><i>⚙</i><i>✎</i><i>⚑</i><i>⤢</i><i>？</i></div>'
+      : '<div class="dzl"><i>✎</i><i>⏱</i><i>◷</i><i>⚙</i><i>？</i></div>';
     const np = i => { const n = nodes[i]; return tool === 'zap' ? { x: n.x + 220, y: n.y + 38 } : tool === 'make' ? { x: n.x + 42, y: n.y + 42 } : { x: n.x + 45, y: n.y + 45 }; };
     let svg = `<svg class="ed-wires" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}"><defs><marker id="arr-${tool}" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z"/></marker></defs>`;
     edges.forEach(([a, b, lab], k) => {
@@ -330,22 +339,23 @@ function snip(n) {
       else if (tool === 'make') { const x1 = A.x + 48, x2 = B.x - 48; d = `M${x1} ${A.y}C${(x1 + x2) / 2} ${A.y} ${(x1 + x2) / 2} ${B.y} ${x2} ${B.y}`; }
       else { d = `M${A.x} ${A.y + 38}L${B.x} ${B.y - 38}`; }
       svg += `<path class="ew" data-k="${k}" d="${d}" ${tool === 'n8n' ? `marker-end="url(#arr-${tool})"` : ''}/><path class="ew-flow" data-k="${k}" d="${d}"/>`;
-      if (lab) { const mx = (A.x + B.x) / 2 + 10, my = (A.y + B.y) / 2 - 8; svg += `<text class="ew-lab" x="${mx}" y="${my}">${lab}</text>`; }
+      if (tool === 'n8n') svg += `<text class="ew-items" data-k="${k}" x="${(A.x + B.x) / 2}" y="${(A.y + B.y) / 2 - 9}" text-anchor="middle">1 item</text>`;
+      if (lab) { const mx = (A.x + B.x) / 2 + 10, my = (A.y + B.y) / 2 + (tool === 'n8n' ? 18 : -8); svg += `<text class="ew-lab" x="${mx}" y="${my}">${lab}</text>`; }
       if (tool === 'zap') svg += `<g class="zp-plus" transform="translate(${A.x} ${(A.y + B.y) / 2})"><circle r="11"/><text y="4.5">+</text></g>`;
     });
     svg += '</svg>';
     world.style.width = W + 'px'; world.style.height = H + 'px';
     world.innerHTML = svg + nodes.map((n, i) => {
-      const pos = `left:${n.x}px;top:${n.y}px`;
-      if (tool === 'n8n') return `<button class="en n8 ${n.trig ? 'trig' : ''}" data-i="${i}" style="${pos}"><span class="n8-face${DARK.has(n.ic) ? ' lt' : ''}">${logo(n.ic, 40)}${n.trig ? '<i class="bolt">⚡</i>' : ''}<i class="ck">✓</i></span><span class="n8-cnt">1 item</span><span class="n8-lbl"><b>${esc(n.n)}</b><small>${esc(n.t)}</small></span></button>`;
-      if (tool === 'make') { const m = meta(n.ic); return `<button class="en mk" data-i="${i}" style="${pos};--c:${m.c}"><span class="mk-face">${logo(n.ic, 40, 'white')}${n.trig ? '<i class="clock">⏱</i>' : ''}<i class="ops">1</i></span><span class="mk-lbl"><b>${esc(n.n)}</b><small>${esc(n.t)}</small><em>${i + 1}</em></span></button>`; }
-      return `<button class="en zp" data-i="${i}" style="${pos}"><span class="zp-ic">${logo(n.ic, 26)}</span><span class="zp-txt"><small>${i + 1}. ${n.trig ? 'Trigger' : 'Action'} · ${esc(n.t)}</small><b>${esc(n.n)}</b></span><i class="ck">✓</i></button>`;
+      const pos = `left:${n.x}px;top:${n.y}px`, aria = `aria-label="${esc(n.n)}: explain this step"`;
+      if (tool === 'n8n') return `<button class="en n8 ${n.trig ? 'trig' : ''}" data-i="${i}" style="${pos}" ${aria}><span class="n8-face">${logo(n.ic, 40)}${n.trig ? '<i class="bolt">⚡</i>' : ''}<i class="spin"></i><i class="ck">✓</i></span><span class="n8-lbl"><b>${esc(n.n)}</b><small>${esc(n.t)}</small></span></button>`;
+      if (tool === 'make') { const m = meta(n.ic); return `<button class="en mk" data-i="${i}" style="${pos};--c:${m.svg ? '#F2F1F6' : m.c}" ${aria}><span class="mk-face">${logo(n.ic, 40, 'white')}${n.trig ? '<i class="clock">⏱</i>' : ''}<i class="ring"></i><i class="ops">1</i></span><span class="mk-lbl"><b>${esc(n.n)}</b><small>${esc(n.t)}</small><em>${i + 1}</em></span></button>`; }
+      return `<button class="en zp" data-i="${i}" style="${pos}" ${aria}><span class="zp-ic">${logo(n.ic, 26)}</span><span class="zp-txt"><small>${i + 1}. ${n.trig ? 'Trigger' : 'Action'} · ${esc(n.t)}</small><b>${esc(n.n)}</b></span><i class="spin"></i><i class="ck">✓</i><i class="zp-more">⋮</i></button>`;
     }).join('');
     fit(); scrub(true);
   }
   function fit() {
     const overlay = getComputedStyle(panel).position === 'absolute', ph = overlay ? panel.offsetHeight + 16 : 0;
-    const cw = canvas.clientWidth - 28, ch = Math.max(60, canvas.clientHeight - ph - (tool === 'n8n' ? 70 : tool === 'make' ? 60 : 24));
+    const cw = canvas.clientWidth - (tool === 'n8n' ? 90 : 60), ch = Math.max(60, canvas.clientHeight - ph - (tool === 'n8n' ? 70 : tool === 'make' ? 60 : 24));
     let s = Math.min(1, cw / W, ch / H);
     // small screens: keep it readable and let the "camera" follow the running step
     cam.follow = s < .55 && tool !== 'zap';
@@ -365,28 +375,82 @@ function snip(n) {
     }
     world.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px)) scale(${cam.s})`;
   }
+
+  /* ---------- what a step does, in plain words, with its data underneath ---------- */
+  // the data a step hands on: real replays carry it; example flows derive it from their app preview
+  function outOf(n) {
+    if (n.o) return n.o;
+    const u = n.ui || {}, key = s => String(s).toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+    if (u.k === 'kv') return Object.fromEntries(u.rows.map(([a, b]) => [key(a), b]));
+    if (u.k === 'table') return { [key(u.where || 'table')]: Object.fromEntries(u.cols.map((c, i) => [key(c), Array.isArray(u.row[i]) ? u.row[i][0] : u.row[i]])) };
+    if (u.k === 'order') return { order: u.no, status: u.status, line_items: u.items.map(([a, b]) => ({ title: a, price: b })), total: u.total };
+    if (u.k === 'chat') return { channel: u.where || 'direct', ...(u.from ? { sent_as: u.from } : {}), text: u.text, delivered: true };
+    if (u.k === 'mail') return { to: u.to, subject: u.subject, body: u.text, sent: true };
+    if (u.k === 'deal') return { pipeline: u.where, stage: u.stage, contact: u.name, value: u.value };
+    return { ok: true };
+  }
+  const typeOf = v => Array.isArray(v) ? `list (${v.length})` : v === null ? 'empty' : typeof v === 'object' ? 'object' : typeof v === 'number' ? 'number' : typeof v === 'boolean' ? 'yes / no' : 'text';
+  function schemaOf(o, pre = '') {
+    return Object.entries(o).flatMap(([k, v]) => v && typeof v === 'object' && !Array.isArray(v) ? schemaOf(v, pre + k + '.') : [[pre + k, typeOf(v), Array.isArray(v) ? (typeof v[0] === 'object' ? Object.keys(v[0] || {}).join(', ') : v.slice(0, 2).join(', ')) : String(v)]]);
+  }
   function showPanel(i) {
-    const n = ex.nodes[i], el = world.querySelector(`.en[data-i="${i}"]`), ran = !!el && (el.classList.contains('done') || el.classList.contains('running'));
-    panel.innerHTML = `<div class="k">${ED[tool].name} · step ${ex._order.indexOf(i) + 1 || '–'} of ${ex._order.length}</div>
-      <h4>${logo(n.ic, 20)} ${esc(n.n)}</h4><p>${esc(n.d)}</p>
-      <div class="k">${ran ? (n.ui ? 'What happened in the app' : 'Output') : 'Waiting to run'}</div>${ran && n.ui ? snip(n) : `<pre>${ran ? esc(JSON.stringify(n.o, null, 2)) : '// keep scrolling to run this step'}</pre>`}`;
+    const n = ex.nodes[i], el = world.querySelector(`.en[data-i="${i}"]`), st = !el ? 'idle' : el.classList.contains('running') ? 'run' : el.classList.contains('done') ? 'done' : 'idle';
+    const step = ex._order.indexOf(i), prev = ex._edges.filter(e => e[1] === i).map(e => ex.nodes[e[0]].n), next = ex._edges.filter(e => e[0] === i).map(e => ex.nodes[e[1]].n), o = outOf(n);
+    panel._i = i;
+    const badge = st === 'run' ? '<span class="p-st run"><i></i>Running now</span>' : st === 'done' ? '<span class="p-st ok">✓ Ran</span>' : '<span class="p-st">Not run yet</span>';
+    let body;
+    if (tab === 'schema') body = `<table class="p-schema"><tr><th>Field</th><th>Type</th><th>Example</th></tr>${schemaOf(o).map(([k, t, v]) => `<tr><td>${esc(k)}</td><td>${esc(t)}</td><td>${esc(String(v).slice(0, 60))}</td></tr>`).join('')}</table><p class="p-hint">The fields this step passes to the next one.</p>`;
+    else if (tab === 'json') body = `<pre>${esc(JSON.stringify(o, null, 2))}</pre>`;
+    else body = `<p>${esc(n.d)}</p>
+      <dl class="p-flow"><div><dt>Gets</dt><dd>${n.trig ? 'Nothing: this step starts the workflow' : esc(prev.join(', ') || 'The step before it') + '’s result'}</dd></div><div><dt>Hands on to</dt><dd>${esc(next.join(', ') || 'Nothing: this is the last step')}</dd></div></dl>
+      ${st !== 'idle' && n.ui ? snip(n) : ''}`;
+    panel.innerHTML = `<div class="k">${ED[tool].name} · ${step > -1 ? `step ${step + 1} of ${ex._order.length}` : 'other branch'}${picked !== null ? ' <button type="button" class="p-follow" data-unpick>Follow the run</button>' : ''}</div>
+      <h4>${logo(n.ic, 22)}<span>${esc(n.n)}<small>${esc(n.t)}</small></span></h4>${badge}
+      <div class="p-tabs" role="tablist">${[['explain', 'Explain'], ['schema', 'Schema'], ['json', 'JSON']].map(([k, l]) => `<button type="button" role="tab" data-tab="${k}" class="${tab === k ? 'on' : ''}" aria-selected="${tab === k}">${l}</button>`).join('')}</div>
+      <div class="p-body">${body}</div>`;
+    panel.classList.toggle('picked', picked !== null);
+    $$('.en', world).forEach(x => x.classList.toggle('sel', +x.dataset.i === i && picked !== null));
     fit();
   }
-  function scrub(force) {
-    if (force === true) fit();
-    const p = reduce ? 1 : progressOf(sec);
-    prog.style.transform = `scaleX(${p})`;
-    const N = ex._order.length, r = p < .08 ? -1 : p >= .88 ? N : Math.min(N - 1, Math.floor((p - .08) / .8 * N));
-    if (r === lastR && force !== true) return; lastR = r;
+
+  /* ---------- drawing a moment of the run: r = -1 waiting, 0..N-1 that step is running, N finished ---------- */
+  function render(r, force) {
+    if (r === lastR && force !== true) return;
+    const N = ex._order.length, was = lastR; lastR = r;
     const doneSet = new Set(ex._order.slice(0, Math.max(0, r)));
     $$('.en', world).forEach(el => { const i = +el.dataset.i; el.classList.toggle('done', doneSet.has(i)); el.classList.toggle('running', ex._order[r] === i); });
     ex._edges.forEach(([a, b], k) => { const on = doneSet.has(a) && (doneSet.has(b) || ex._order[r] === b); $$(`[data-k="${k}"]`, world).forEach(p => p.classList.toggle('lit', on)); });
-    const cur = r >= 0 && r < N ? ex._order[r] : r >= N ? ex._order[N - 1] : 0;
-    cam.node = cur;
-    if (picked === null || force === true) showPanel(cur); else { picked = null; applyCam(); }
-    const status = r < 0 ? 'Waiting for trigger' : r >= N ? `✓ Succeeded · ${ex.run}` : `Running step ${r + 1} of ${N}: ${ex.nodes[cur].n}`;
-    const btn = tool === 'n8n' ? '<span class="f-btn f-n8">▶ Execute workflow</span>' : tool === 'make' ? '<span class="f-btn f-mk">▶</span><span class="f-sub">Run once</span>' : '<span class="f-btn f-zp">Test run</span>';
-    foot.innerHTML = `${btn}<span class="f-stat ${r >= N ? 'ok' : r >= 0 ? 'run' : ''}">${esc(status)}</span>`;
+    const cur = r >= 0 && r < N ? ex._order[r] : r >= N ? ex._order[N - 1] : 0, busy = r >= 0 && r < N;
+    cam.node = cur; panel._cur = cur;
+    if (picked === null || force === true) showPanel(cur); else { showPanel(picked); applyCam(); }
+    win.classList.toggle('busy', busy); win.classList.toggle('finished', r >= N);
+    const status = r < 0 ? 'Waiting for trigger' : r >= N ? `Succeeded in ${ex.run}` : `Step ${r + 1} of ${N}: ${ex.nodes[cur].n}`;
+    const label = tool === 'n8n' ? (busy ? 'Executing workflow' : 'Execute workflow') : tool === 'make' ? (busy ? 'Stop' : 'Run once') : (busy ? 'Testing…' : 'Test run');
+    const btn = tool === 'n8n' ? `<button type="button" class="f-btn f-n8" data-run><i class="f-ic">${busy ? '' : '⚗'}</i>${label}</button>`
+      : tool === 'make' ? `<button type="button" class="f-btn f-mk" data-run aria-label="${label}"><i class="f-ic">${busy ? '' : '▶'}</i></button><span class="f-sub"><b>${label}</b><small>Immediately as data arrives</small></span>`
+      : `<button type="button" class="f-btn f-zp" data-run><i class="f-ic"></i>${label}</button>`;
+    foot.innerHTML = `${tool === 'n8n' ? '<span class="f-logs">Logs</span>' : ''}${btn}<span class="f-stat ${r >= N ? 'ok' : busy ? 'run' : ''}">${busy ? '<i class="dot"></i>' : r >= N ? '✓ ' : ''}${esc(status)}</span>`;
+    if (r >= N && was !== null && was < N && was >= 0) { toast.textContent = tool === 'n8n' ? '✓ Workflow executed successfully' : tool === 'make' ? '✓ The scenario run was completed' : '✓ Test was successful'; toast.classList.add('on'); clearTimeout(toast._t); toast._t = setTimeout(() => toast.classList.remove('on'), 2600); }
+    else if (r < N) toast.classList.remove('on');
+  }
+  const scrollR = () => { const p = reduce ? 1 : progressOf(sec), N = ex._order.length; return p < .08 ? -1 : p >= .88 ? N : Math.min(N - 1, Math.floor((p - .08) / .8 * N)); };
+  function scrub(force) {
+    if (force === true) fit();
+    prog.style.transform = `scaleX(${reduce ? 1 : progressOf(sec)})`;
+    const r = scrollR();
+    if (manual) return;                       // a button-run is playing: let it finish
+    if (held !== null && force !== true) { if (r === held) return; held = null; }
+    else if (force === true && held !== null) { render(lastR, true); return; }
+    render(r, force);
+  }
+  /* ---------- the run buttons: play the whole workflow from the top, without scrolling ---------- */
+  function stop(reset) { clearTimeout(timer); timer = null; if (manual && reset) { manual = false; held = null; render(scrollR(), true); } manual = false; if (!reset) held = null; }
+  function runNow() {
+    clearTimeout(timer); manual = true; held = null; picked = null;
+    const N = ex._order.length; let r = -1;
+    render(-1, true);
+    const tick = () => { r++; render(r, true); if (r < N) timer = setTimeout(tick, reduce ? 250 : r === 0 ? 900 : 1050); else { manual = false; held = scrollR(); } };
+    timer = setTimeout(tick, 450);
   }
   scrubbers.push(f => scrub(f));
   let last = null; try { last = sessionStorage.getItem('ed-flow'); } catch (e) {}

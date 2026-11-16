@@ -312,6 +312,32 @@ $('#brief').onsubmit = e => {
   const msg = `Hi ${first},${who ? ' this is ' + who + '.' : ''}\n\nWhat we do by hand today:\n${task}\n\nTools we use: ${picked.size ? [...picked].join(', ') : 'not listed'}\n\n(Sent from your portfolio)`;
   const url = via === 'wa' ? 'https://wa.me/' + (S.whatsapp || '2348110117004') + '?text=' + encodeURIComponent(msg)
     : 'mailto:' + (S.email || 'simeono.automation@gmail.com') + '?subject=' + encodeURIComponent('Automation brief' + (who ? ' from ' + who : '')) + '&body=' + encodeURIComponent(msg);
-  window.open(url, '_blank', 'noopener');
+  if (via === 'wa') window.open(url, '_blank', 'noopener');
+  else mailMenu(e.submitter || $('[data-via="mail"]'), { to: S.email || 'simeono.automation@gmail.com', subject: 'Automation brief' + (who ? ' from ' + who : ''), body: msg });
 };
+
+/* ---------- email: many computers have no mail app set up, so "mailto" alone does nothing. Offer the web mailboxes too. ---------- */
+function mailMenu(anchor, { to, subject = '', body = '' }) {
+  $$('.mail-menu').forEach(m => m.remove());
+  const q = encodeURIComponent, m = document.createElement('div');
+  m.className = 'mail-menu'; m.setAttribute('role', 'menu');
+  m.innerHTML = `<p>Send to <b>${esc(to)}</b></p>
+    <a role="menuitem" target="_blank" rel="noopener" href="https://mail.google.com/mail/?view=cm&fs=1&to=${q(to)}&su=${q(subject)}&body=${q(body)}">Open in Gmail</a>
+    <a role="menuitem" target="_blank" rel="noopener" href="https://outlook.live.com/mail/0/deeplink/compose?to=${q(to)}&subject=${q(subject)}&body=${q(body)}">Open in Outlook</a>
+    <a role="menuitem" href="mailto:${esc(to)}?subject=${q(subject)}&body=${q(body)}">Use my mail app</a>
+    <button type="button" role="menuitem" data-copy>Copy the address</button>`;
+  document.body.appendChild(m);
+  const r = anchor.getBoundingClientRect(), w = m.offsetWidth, h = m.offsetHeight;
+  m.style.left = Math.max(12, Math.min(innerWidth - w - 12, r.left + r.width / 2 - w / 2)) + scrollX + 'px';
+  m.style.top = (r.top > h + 20 ? r.top - h - 10 : r.bottom + 10) + scrollY + 'px';
+  m.querySelector('[data-copy]').onclick = async ev => { try { await navigator.clipboard.writeText(to); ev.target.textContent = 'Copied ✓'; } catch { ev.target.textContent = to; } };
+  const close = ev => { if (ev.type === 'keydown' ? ev.key === 'Escape' : !m.contains(ev.target) && !anchor.contains(ev.target)) { m.remove(); removeEventListener('click', close, true); removeEventListener('keydown', close); } };
+  setTimeout(() => { addEventListener('click', close, true); addEventListener('keydown', close); }, 0);
+  m.querySelector('a').focus();
+}
+document.addEventListener('click', e => {
+  const a = e.target.closest('a[href^="mailto:"]'); if (!a || a.closest('.mail-menu')) return;
+  e.preventDefault(); const u = new URL(a.href);
+  mailMenu(a, { to: decodeURIComponent(u.pathname), subject: u.searchParams.get('subject') || 'Hello from your portfolio', body: u.searchParams.get('body') || '' });
+});
 })();
