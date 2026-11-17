@@ -1,6 +1,10 @@
 # Only site/ is published. The backend code, notes and config in this folder stay private.
 [build]
   publish = "site"
+  # Credit guard: the free plan allows about 20 production deploys a month (15 credits each).
+  # A push only deploys when its commit message contains [deploy] (node github/publish.mjs "msg" --deploy).
+  # Exit 0 = skip the build, exit 1 = build.
+  ignore = "git log -1 --pretty=%B | grep -qF '[deploy]' && exit 1 || exit 0"
 
 [functions]
   directory = "netlify/functions"
