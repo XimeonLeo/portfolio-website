@@ -30,11 +30,6 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%2315140F'/%3E%3Ctext x='16' y='21' font-family='monospace' font-size='13' font-weight='700' fill='%23F3EFE6' text-anchor='middle'%3ESO%3C/text%3E%3Ccircle cx='27' cy='5' r='4' fill='%23FF4F1A'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="preload" href="assets/hero-handshake.jpg" as="image" fetchpriority="high">
-<link rel="preload" href="assets/simeon.jpg" as="image" fetchpriority="high">
-<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
-<link rel="dns-prefetch" href="https://calendly.com">
-<link rel="dns-prefetch" href="https://assets.calendly.com">
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css">
 <link rel="stylesheet" href="motion.css">
@@ -149,10 +144,10 @@
 <!-- PROOF -->
 <section class="proof" aria-label="Numbers from real builds">
   <div class="wrap proof-grid">
-    <div data-r><div class="n" data-count="14">14</div><p>page closing packet generated from one title binder PDF</p></div>
-    <div data-r><div class="n" data-count="82">82</div><p>official state-form fields filled and left editable per packet</p></div>
+    <div data-r><div class="n" data-count="14">0</div><p>page closing packet generated from one title binder PDF</p></div>
+    <div data-r><div class="n" data-count="82">0</div><p>official state-form fields filled and left editable per packet</p></div>
     <div data-r><div class="n">$0.35</div><p>AI cost to check a binder, versus a paralegal's half hour</p></div>
-    <div data-r><div class="n" data-count="1000" data-suffix="+">1,000+</div><p>UK businesses researched with a written pitch, in one run</p></div>
+    <div data-r><div class="n" data-count="1000" data-suffix="+">0</div><p>UK businesses researched with a written pitch, in one run</p></div>
     <div data-r><div class="n">8:00<sup>am</sup></div><p>daily digest tells the office what's missing on every file</p></div>
   </div>
 </section>
@@ -285,11 +280,59 @@
   <div class="wrap">
     <div class="sec-head">
       <div data-r><p class="eyebrow">Selected work</p><h2>Workflows you can <em>watch run.</em></h2></div>
-      <p data-r><span data-wc="demo" data-cap>Eleven</span> builds with a screen recording of a real run, then <span data-wc="client">seven</span> systems that are live with clients. Open any card for the problem, the build and what happened.</p>
+      <p data-r><span data-wc="demo" data-cap>Fourteen</span> builds with a screen recording of a real run, then <span data-wc="client">seven</span> systems that are live with clients. Open any card for the problem, the build and what happened.</p>
     </div>
     <p class="demo-note" data-r><b>Demo builds.</b> Real n8n workflows, run for real, with made-up sample data. Texts and emails go to a test outbox instead of being sent.</p>
 
     <div class="work-grid demo-grid">
+      <button class="case demo" data-case="dvoice" data-video="assets/work/demo-voice.mp4" data-sound data-r>
+        <div class="case-img"><img src="assets/work/cover-dvoice.jpg" data-shot="assets/work/demo-voice.jpg" alt="The voice receptionist demo after a booked call, with the workflow log beside it" loading="lazy" decoding="async" width="1600" height="1000"><span class="play" aria-hidden="true">▶</span></div>
+        <div class="case-top"><span class="case-cat">Local services · n8n + Claude</span><span class="demo-pill">Demo build</span></div>
+        <h3>AI voice receptionist that books and hands off</h3>
+        <p>It answers price and hours questions from the shop's own notes, books a free slot, and puts a person on for quotes.</p>
+        <div class="case-foot"><div class="stat"><b>2-4 s</b>per spoken reply, measured</div><span class="open">Watch the call</span></div>
+      </button>
+
+      <button class="case demo" data-case="droute" data-video="assets/work/demo-routing.mp4" data-r>
+        <div class="case-img"><img src="assets/work/cover-droute.jpg" data-shot="assets/work/demo-routing.jpg" alt="The lead routing demo: three leads scored and assigned to reps" loading="lazy" decoding="async" width="1600" height="1000"><span class="play" aria-hidden="true">▶</span></div>
+        <div class="case-top"><span class="case-cat">Any sales team · n8n + Claude</span><span class="demo-pill">Demo build</span></div>
+        <h3>AI lead scoring and routing to the right rep</h3>
+        <p>Leads from a form, a Facebook ad and email are de-duplicated, scored with reasons and sent to the rep who covers them.</p>
+        <div class="case-foot"><div class="stat"><b>88/100</b>Hot lead routed by service and area</div><span class="open">Watch the run</span></div>
+      </button>
+
+      <button class="case demo" data-case="dinvoice" data-video="assets/work/demo-invoice.mp4" data-r>
+        <div class="case-img"><img src="assets/work/cover-dinvoice.jpg" data-shot="assets/work/demo-invoice.jpg" alt="The invoice inbox demo after four invoices: booked, sent for approval and a duplicate stopped" loading="lazy" decoding="async" width="1600" height="1000"><span class="play" aria-hidden="true">▶</span></div>
+        <div class="case-top"><span class="case-cat">Construction · n8n + Claude</span><span class="demo-pill">Demo build</span></div>
+        <h3>AI invoice processing, checked before booking</h3>
+        <p>AI reads each invoice PDF, code checks every number, and clean invoices are booked while the rest go for approval.</p>
+        <div class="case-foot"><div class="stat"><b>6</b>checks in code before booking</div><span class="open">Watch the run</span></div>
+      </button>
+
+      <button class="case demo" data-case="doutreach" data-video="assets/work/demo-outreach.mp4" data-r>
+        <div class="case-img"><img src="assets/work/cover-doutreach.jpg" data-shot="assets/work/demo-outreach.jpg" alt="The outreach approval queue with personal drafts waiting for a yes" loading="lazy" decoding="async" width="1600" height="1000"><span class="play" aria-hidden="true">▶</span></div>
+        <div class="case-top"><span class="case-cat">B2B sales · n8n + Claude</span><span class="demo-pill">Demo build</span></div>
+        <h3>AI outreach agent, sent only after approval</h3>
+        <p>Each prospect gets a fit score and a personal email and follow-up, and nothing goes out until you approve it.</p>
+        <div class="case-foot"><div class="stat"><b>15 s</b>to research and draft 4 prospects</div><span class="open">Watch the run</span></div>
+      </button>
+
+      <button class="case demo" data-case="dshop" data-video="assets/work/demo-shop.mp4" data-r>
+        <div class="case-img"><img src="assets/work/cover-dshop.jpg" data-shot="assets/work/demo-shop.jpg" alt="The shop chat demo after four messages, with the workflow log beside it" loading="lazy" decoding="async" width="1600" height="1000"><span class="play" aria-hidden="true">▶</span></div>
+        <div class="case-top"><span class="case-cat">Online shop · n8n + Claude</span><span class="demo-pill">Demo build</span></div>
+        <h3>AI support agent for an online shop</h3>
+        <p>Order tracking and policy answers in seconds, nothing shared across customers, and refunds left to people.</p>
+        <div class="case-foot"><div class="stat"><b>1.7-3 s</b>per reply, measured</div><span class="open">Watch the run</span></div>
+      </button>
+
+      <button class="case demo" data-case="dmissed" data-video="assets/work/demo-missed.mp4" data-r>
+        <div class="case-img"><img src="assets/work/cover-dmissed.jpg" data-shot="assets/work/demo-missed.jpg" alt="The missed-call demo: text thread on a phone and the CRM record" loading="lazy" decoding="async" width="1600" height="1000"><span class="play" aria-hidden="true">▶</span></div>
+        <div class="case-top"><span class="case-cat">Trades · n8n + Claude</span><span class="demo-pill">Demo build</span></div>
+        <h3>Missed-call text-back with follow-ups</h3>
+        <p>Every missed caller gets a text in seconds, follow-ups stop when they reply, and urgent jobs reach the owner at once.</p>
+        <div class="case-foot"><div class="stat"><b>1</b>text per caller, even on a repeat call</div><span class="open">Watch the run</span></div>
+      </button>
+
       <button class="case demo" data-case="dlaw" data-video="assets/work/demo-law.mp4" data-r>
         <div class="case-img"><img src="assets/work/cover-dlaw.jpg" data-shot="assets/work/demo-law.jpg" alt="The law intake workflow after a run, every step green" loading="lazy" decoding="async" width="1600" height="1000"><span class="play" aria-hidden="true">▶</span></div>
         <div class="case-top"><span class="case-cat">Law offices · n8n + Claude</span><span class="demo-pill">Demo build</span></div>
@@ -354,29 +397,6 @@
         <div class="case-foot"><div class="stat"><b>9</b>tasks created from 8 deals</div><span class="open">Watch the run</span></div>
       </button>
 
-      <button class="case demo" data-case="dvoice" data-video="assets/work/demo-voice.mp4" data-sound data-r>
-        <div class="case-img"><img src="assets/work/cover-dvoice.jpg" data-shot="assets/work/demo-voice.jpg" alt="The voice receptionist demo after a booked call, with the workflow log beside it" loading="lazy" decoding="async" width="1600" height="1000"><span class="play" aria-hidden="true">▶</span></div>
-        <div class="case-top"><span class="case-cat">Local services · n8n + Claude</span><span class="demo-pill">Demo build</span></div>
-        <h3>AI voice receptionist that books and hands off</h3>
-        <p>It answers price and hours questions from the shop's own notes, books a free slot, and puts a person on for quotes.</p>
-        <div class="case-foot"><div class="stat"><b>2-4 s</b>per spoken reply, measured</div><span class="open">Watch the call</span></div>
-      </button>
-
-      <button class="case demo" data-case="dmissed" data-video="assets/work/demo-missed.mp4" data-r>
-        <div class="case-img"><img src="assets/work/cover-dmissed.jpg" data-shot="assets/work/demo-missed.jpg" alt="The missed-call demo: text thread on a phone and the CRM record" loading="lazy" decoding="async" width="1600" height="1000"><span class="play" aria-hidden="true">▶</span></div>
-        <div class="case-top"><span class="case-cat">Trades · n8n + Claude</span><span class="demo-pill">Demo build</span></div>
-        <h3>Missed-call text-back with follow-ups</h3>
-        <p>Every missed caller gets a text in seconds, follow-ups stop when they reply, and urgent jobs reach the owner at once.</p>
-        <div class="case-foot"><div class="stat"><b>1</b>text per caller, even on a repeat call</div><span class="open">Watch the run</span></div>
-      </button>
-
-      <button class="case demo" data-case="droute" data-video="assets/work/demo-routing.mp4" data-r>
-        <div class="case-img"><img src="assets/work/cover-droute.jpg" data-shot="assets/work/demo-routing.jpg" alt="The lead routing demo: three leads scored and assigned to reps" loading="lazy" decoding="async" width="1600" height="1000"><span class="play" aria-hidden="true">▶</span></div>
-        <div class="case-top"><span class="case-cat">Any sales team · n8n + Claude</span><span class="demo-pill">Demo build</span></div>
-        <h3>AI lead scoring and routing to the right rep</h3>
-        <p>Leads from a form, a Facebook ad and email are de-duplicated, scored with reasons and sent to the rep who covers them.</p>
-        <div class="case-foot"><div class="stat"><b>88/100</b>Hot lead routed by service and area</div><span class="open">Watch the run</span></div>
-      </button>
     </div>
 
     <div class="demo-head" data-r>
@@ -726,16 +746,14 @@
   </div>
 </div>
 
-<!-- All scripts are deferred: they download in parallel, never hold up the first paint,
-     and still run in this exact order once the page is parsed. -->
-<script src="icons.js" defer></script>
+<script src="icons.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/topojson-client@3.1.0/dist/topojson-client.min.js" defer></script>
-<script src="app.js" defer></script>
+<script src="app.js"></script>
 <script src="motion.js" defer></script>
-<script src="demo.js" defer></script>
+<script src="demo.js"></script>
 <script src="chatmock.js" defer></script>
 <script src="footer-glow.js" defer></script>
-<script src="work.js" defer></script>
+<script src="work.js"></script>
 <script src="builder.js" defer></script>
 </body>
 </html>

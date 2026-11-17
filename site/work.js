@@ -87,43 +87,8 @@
     demoGrid.style.display = vis('demo') ? '' : 'none';
     const head = document.querySelector('#work .demo-head'); if (head) head.style.display = vis('client') ? '' : 'none';
     clientGrid.style.display = vis('client') ? '' : 'none';
-    clip();
   }
   window.applyWork = apply;
-
-  /* Phones and tablets: show the first few cards of each group and a "See all" button for the rest.
-     CSS only hides the extra cards below 1061px wide, so the desktop layout is unchanged. */
-  const SHOW = { demo: 3, client: 3 };
-  const LABEL = { demo: ['See all', 'demo builds'], client: ['See all', 'client systems'] };
-  const more = {};
-  for (const g of ['demo', 'client']) {
-    const wrap = document.createElement('div');
-    wrap.className = 'work-more';
-    wrap.innerHTML = '<button type="button" class="btn ghost"></button>';
-    GRIDS[g].after(wrap);
-    GRIDS[g].classList.add('clip');
-    wrap.firstChild.addEventListener('click', () => {
-      const open = GRIDS[g].classList.toggle('clip') === false;
-      clip();
-      if (!open) GRIDS[g].scrollIntoView({ block: 'start', behavior: 'smooth' });
-      else { const first = GRIDS[g].querySelector('.case.was-over'); if (first) first.focus({ preventScroll: true }); }
-    });
-    more[g] = wrap;
-  }
-  function clip() {
-    for (const g of ['demo', 'client']) {
-      if (!more[g]) continue;
-      const vis = [...GRIDS[g].children].filter(el => el.matches('.case') && el.style.display !== 'none');
-      vis.forEach((el, i) => { const over = i >= SHOW[g]; el.classList.toggle('over', over); el.classList.toggle('was-over', over); });
-      const extra = vis.length - SHOW[g], btn = more[g].firstChild, collapsed = GRIDS[g].classList.contains('clip');
-      more[g].hidden = extra <= 0 || GRIDS[g].style.display === 'none';
-      btn.setAttribute('aria-expanded', String(!collapsed));
-      btn.innerHTML = collapsed
-        ? `${LABEL[g][0]} ${vis.length} ${LABEL[g][1]} <small>+${extra} more</small>`
-        : 'Show fewer <span class="arr">↑</span>';
-    }
-  }
-  clip();
 
   const preview = /[?&]preview=1/.test(location.search) && window.parent !== window;
   if (preview) {
