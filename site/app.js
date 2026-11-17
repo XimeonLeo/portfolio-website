@@ -18,6 +18,9 @@ const io = new IntersectionObserver(es => es.forEach(e => {
   e.target.classList.add('in'); io.unobserve(e.target);
   const n = e.target.querySelector('[data-count]'); if (n) count(n);
 }), { threshold: .12, rootMargin: '0px 0px -40px 0px' });
+// The real numbers are in the HTML (for Google, link previews and no-JS visitors);
+// with JS on, they start from 0 (still hidden by the reveal) and count up when scrolled into view.
+if (!reduce) $$('[data-count]').forEach(el => { el.textContent = '0'; });
 $$('[data-r]').forEach((el, i) => { el.style.transitionDelay = (i % 4) * 70 + 'ms'; io.observe(el); });
 function count(el) {
   const to = +el.dataset.count, suf = el.dataset.suffix || '', t0 = performance.now(), d = reduce ? 1 : 1400;
