@@ -24,4 +24,4 @@ Allow: /
 User-agent: Google-Extended
 Allow: /
 
-Sitemap: https://simeononabowale.netlify.app/sitemap.xml
+Sitemap: https://simeononabowale.dev/sitemap.xml

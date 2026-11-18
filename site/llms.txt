@@ -1,6 +1,6 @@
 # Simeon Onabowale
 
-> Simeon Onabowale is an AI automation engineer based in Lagos, Nigeria. He builds n8n, Make.com and Zapier workflows, Claude-powered AI agents and chatbots, and GoHighLevel systems for teams in the US, UK and EU. Website: https://simeononabowale.netlify.app/
+> Simeon Onabowale is an AI automation engineer based in Lagos, Nigeria. He builds n8n, Make.com and Zapier workflows, Claude-powered AI agents and chatbots, and GoHighLevel systems for teams in the US, UK and EU. Website: https://simeononabowale.dev/
 
 ## Who he is
 

@@ -12,7 +12,7 @@
 
 <br>
 
-<a href="https://simeononabowale.netlify.app"><img src="https://img.shields.io/badge/▶_View_the_live_site-FF4F1A?style=for-the-badge" alt="View the live site"></a>
+<a href="https://simeononabowale.dev"><img src="https://img.shields.io/badge/▶_View_the_live_site-FF4F1A?style=for-the-badge" alt="View the live site"></a>
 <a href="https://calendly.com/simeono-automation/meet-with-d-xlntinnovator-simeon"><img src="https://img.shields.io/badge/Book_a_call-15140F?style=for-the-badge&logo=calendly&logoColor=F3EFE6" alt="Book a call"></a>
 
 <br>
@@ -119,7 +119,7 @@
 
 <br>
 
-> **On the live site:** scroll through 13 example workflows (Shopify, Notion, GoHighLevel, monday.com, Slack, WhatsApp, Telegram and more) and watch each step run, with a preview of what happens in every app. [Open it →](https://simeononabowale.netlify.app/#replay)
+> **On the live site:** scroll through 13 example workflows (Shopify, Notion, GoHighLevel, monday.com, Slack, WhatsApp, Telegram and more) and watch each step run, with a preview of what happens in every app. [Open it →](https://simeononabowale.dev/#replay)
 
 <br>
 

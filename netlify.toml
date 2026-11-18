@@ -21,8 +21,6 @@
 [[headers]]
   for = "/*"
   [headers.values]
-    # TEMPORARY while the site lives on simeononabowale.netlify.app. DELETE this line the day simeononabowale.me is connected.
-    X-Robots-Tag = "noindex"
     X-Content-Type-Options = "nosniff"
     Referrer-Policy = "strict-origin-when-cross-origin"
 
@@ -30,3 +28,10 @@
   for = "/assets/*"
   [headers.values]
     Cache-Control = "public, max-age=604800"
+
+# One address for Google: the old netlify.app address forwards to the real domain.
+[[redirects]]
+  from = "https://simeononabowale.netlify.app/*"
+  to = "https://simeononabowale.dev/:splat"
+  status = 301
+  force = true
