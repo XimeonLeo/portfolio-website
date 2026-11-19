@@ -694,3 +694,37 @@ button.try-visual{border:0;background:none;font:inherit;cursor:pointer}
   .nav.menu .nav-links{display:flex;flex-direction:column;width:100%;order:3;margin:6px 0 4px}
   .nav.menu .nav-links a{padding:12px;font-size:15px}
 }
+
+/* ---------- Plans before prices (example project plans, hosted on simeon-plans.pages.dev) ---------- */
+.plans{background:var(--paper-2);border-top:1px solid var(--line)}
+.plan-inside{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:-20px 0 40px}
+.plan-inside span:first-child{font:500 12px var(--mono);color:var(--mute);letter-spacing:.1em;text-transform:uppercase;margin-right:6px}
+.plan-inside .tag{font-size:12.5px;padding:7px 12px;background:var(--card)}
+.plan-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:22px}
+.plan-card{background:var(--card);border:1px solid var(--line);border-radius:20px;overflow:hidden;display:flex;flex-direction:column;transition:transform .25s,box-shadow .25s,border-color .25s}
+.plan-card:hover{transform:translateY(-4px);box-shadow:0 26px 50px -30px rgba(21,20,15,.45);border-color:var(--line-2)}
+.plan-top{background:var(--night);color:var(--night-text);padding:22px 22px 24px;position:relative;overflow:hidden}
+.plan-top::after{content:"";position:absolute;width:220px;height:220px;border-radius:50%;background:var(--signal);opacity:.22;filter:blur(60px);right:-90px;top:-110px;pointer-events:none}
+.plan-meta{display:flex;justify-content:space-between;gap:8px;font:500 11px var(--mono);letter-spacing:.08em;text-transform:uppercase}
+.plan-ind{color:var(--night-mute)}
+.plan-ex{color:#FF8A60;border:1px solid #5a2a17;border-radius:999px;padding:3px 8px;font-size:10px}
+.plan-top h3{font-size:22px;line-height:1.2;margin-top:16px;position:relative}
+.plan-head{margin:10px 0 0;font-size:14px;line-height:1.5;color:var(--night-mute);font-style:italic;position:relative}
+.plan-body{padding:20px 22px 22px;display:flex;flex-direction:column;gap:16px;flex:1}
+.plan-body>p{margin:0;font-size:15px;line-height:1.55;color:var(--ink-2)}
+.plan-bars{display:flex;gap:4px;height:26px}
+.plan-bars span{background:var(--paper-2);border:1px solid var(--line);border-radius:7px;display:flex;align-items:center;padding-left:8px;position:relative;overflow:hidden}
+.plan-bars span::before{content:"";position:absolute;inset:0;width:0;background:var(--signal);opacity:.16;transition:width .9s cubic-bezier(.2,.7,.2,1)}
+.plan-card.in .plan-bars span::before,.plan-card:hover .plan-bars span::before{width:100%}
+.plan-bars span:nth-child(2)::before{transition-delay:.15s}.plan-bars span:nth-child(3)::before{transition-delay:.3s}.plan-bars span:nth-child(4)::before{transition-delay:.45s}
+.plan-bars i{font:600 11px var(--mono);font-style:normal;color:var(--signal-ink);position:relative}
+.plan-ms{margin:0;padding-left:20px;font-size:14px;line-height:1.45;color:var(--ink-2);display:flex;flex-direction:column;gap:5px}
+.plan-ms li::marker{color:var(--signal);font-weight:700}
+.plan-ms b{font:500 11.5px var(--mono);color:var(--mute);margin-left:4px}
+.plan-stats{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13px;color:var(--mute);border-top:1px dashed var(--line);padding-top:14px;margin-top:auto}
+.plan-stats b{color:var(--ink);font-weight:700}
+.plan-go{align-self:flex-start;display:inline-flex;gap:8px;align-items:center;background:var(--ink);color:var(--paper);text-decoration:none;font-weight:600;font-size:14.5px;padding:12px 18px;border-radius:999px;transition:background .2s,transform .2s}
+.plan-go:hover{background:var(--signal);transform:translateX(2px)}
+@media (max-width:1060px){.plan-grid{grid-template-columns:1fr 1fr}}
+@media (max-width:640px){.plan-grid{grid-template-columns:1fr}.plan-inside{margin:-8px 0 28px}}
+@media (prefers-reduced-motion:reduce){.plan-bars span::before{transition:none;width:100%}}
