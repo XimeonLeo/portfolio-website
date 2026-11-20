@@ -31,10 +31,12 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script>try{var t=localStorage.getItem("site-theme");if(t!=="day"&&t!=="night"){var h=new Date().getHours();t=h>=6&&h<19?"day":"night"}document.documentElement.dataset.theme=t}catch(e){document.documentElement.dataset.theme="day"}</script>
 <link rel="stylesheet" href="styles.css">
 <link rel="stylesheet" href="motion.css">
 <link rel="stylesheet" href="chatmock.css">
 <link rel="stylesheet" href="footer-glow.css">
+<link rel="stylesheet" href="ambient.css">
 <link rel="stylesheet" href="builder.css">
 <script src="settings.js"></script>
 </head>
@@ -57,6 +59,7 @@
         <a href="#plans">Plans</a>
         <a href="#faq">FAQ</a>
       </nav>
+      <button type="button" class="theme-btn" id="themeBtn" aria-pressed="false" aria-label="Switch to night mode"><svg class="t-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.5"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"/></svg><svg class="t-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 14.6A8.5 8.5 0 0 1 9.4 3.5a8.5 8.5 0 1 0 11.1 11.1z"/></svg><i class="t-star"></i><i class="t-star"></i></button>
       <a class="btn nav-cta" href="#contact">Start a project <span class="arr">→</span></a>
       <button class="menu-btn" id="menuBtn" aria-label="Open menu" aria-expanded="false">☰</button>
     </div>
@@ -281,11 +284,32 @@
   <div class="wrap">
     <div class="sec-head">
       <div data-r><p class="eyebrow">Selected work</p><h2>Workflows you can <em>watch run.</em></h2></div>
-      <p data-r><span data-wc="demo" data-cap>Twenty</span> builds with a screen recording of a real run, then <span data-wc="client">seven</span> systems that are live with clients. Open any card for the problem, the build and what happened.</p>
+      <p data-r><span data-wc="demo" data-cap>Twenty-three</span> builds with a screen recording of a real run, then <span data-wc="client">seven</span> systems that are live with clients. Open any card for the problem, the build and what happened.</p>
     </div>
     <p class="demo-note" data-r><b>Demo builds.</b> Real n8n workflows, run for real, with made-up sample data. Texts and emails go to a test outbox instead of being sent.</p>
 
     <div class="work-grid demo-grid">
+      <button class="case demo" data-case="dcall" data-video="assets/work/demo-calls.mp4" data-r>
+        <div class="case-img"><img src="assets/work/cover-dcall.jpg" data-shot="assets/work/demo-calls.jpg" alt="The outbound calling demo: the owner sheet with intent, AI call summary, asking price and recording link written to each row" loading="lazy" decoding="async" width="1600" height="1000"><span class="play" aria-hidden="true">▶</span></div>
+        <div class="case-top"><span class="case-cat">Real estate, Kuala Lumpur · n8n + Retell AI</span><span class="demo-pill">Demo build</span></div>
+        <h3>Outbound AI calling agent, English and Mandarin</h3>
+        <p>Owners on a Google Sheet are called by a Retell AI agent; each call comes back as Sell, Rent, Not Interested or Follow-up, with every figure checked.</p>
+        <div class="case-foot"><div class="stat"><b>4</b>calls, sheet updated</div><span class="open">Watch the run</span></div>
+      </button>
+      <button class="case demo" data-case="dsocial" data-video="assets/work/demo-social.mp4" data-r>
+        <div class="case-img"><img src="assets/work/cover-dsocial.jpg" data-shot="assets/work/demo-social.jpg" alt="The social posting demo: the rules sheet beside four posts for the Facebook Page, Instagram, LinkedIn and a Facebook Group" loading="lazy" decoding="async" width="1600" height="1000"><span class="play" aria-hidden="true">▶</span></div>
+        <div class="case-top"><span class="case-cat">Physio clinic · n8n + Claude</span><span class="demo-pill">Demo build</span></div>
+        <h3>AI social media posting agent with a rules sheet</h3>
+        <p>Blog articles become a fresh post per channel; code checks limits, links and medical claims, then posts publish or wait for approval.</p>
+        <div class="case-foot"><div class="stat"><b>9.3 s</b>for 4 checked posts</div><span class="open">Watch the run</span></div>
+      </button>
+      <button class="case demo" data-case="dwabi" data-video="assets/work/demo-wabi.mp4" data-r>
+        <div class="case-img"><img src="assets/work/cover-dwabi.jpg" data-shot="assets/work/demo-wabi.jpg" alt="The bilingual WhatsApp demo: Arabic, English and Arabizi messages answered, and a 25-hour follow-up sent as an Arabic template" loading="lazy" decoding="async" width="1600" height="1000"><span class="play" aria-hidden="true">▶</span></div>
+        <div class="case-top"><span class="case-cat">Beauty salon, Doha · n8n + Claude</span><span class="demo-pill">Demo build</span></div>
+        <h3>Bilingual WhatsApp assistant, Arabic and English</h3>
+        <p>Replies in the customer's own language, even Arabic typed in Latin letters, with prices only from the salon sheet and bookings sent to the front desk.</p>
+        <div class="case-foot"><div class="stat"><b>3.9-4.7 s</b>per WhatsApp reply</div><span class="open">Watch the run</span></div>
+      </button>
       <button class="case demo" data-case="dwapi" data-video="assets/work/demo-wapi.mp4" data-r>
         <div class="case-img"><img src="assets/work/cover-dwapi.jpg" data-shot="assets/work/demo-wapi.jpg" alt="The WhatsApp Cloud API demo: order status, delivery slots as reply buttons and the Cloud API messages request" loading="lazy" decoding="async" width="1600" height="1000"><span class="play" aria-hidden="true">▶</span></div>
         <div class="case-top"><span class="case-cat">Furniture store · n8n + Claude</span><span class="demo-pill">Demo build</span></div>
@@ -857,5 +881,6 @@
 <script src="footer-glow.js" defer></script>
 <script src="work.js"></script>
 <script src="builder.js" defer></script>
+<script src="ambient.js" defer></script>
 </body>
 </html>

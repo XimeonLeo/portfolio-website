@@ -728,3 +728,8 @@ button.try-visual{border:0;background:none;font:inherit;cursor:pointer}
 @media (max-width:1060px){.plan-grid{grid-template-columns:1fr 1fr}}
 @media (max-width:640px){.plan-grid{grid-template-columns:1fr}.plan-inside{margin:-8px 0 28px}}
 @media (prefers-reduced-motion:reduce){.plan-bars span::before{transition:none;width:100%}}
+
+/* ---------- Work: "Show more" fold (about 2 rows per grid) ---------- */
+#work .case.fold-off{display:none!important}
+.fold-wrap{display:flex;justify-content:center;margin:28px 0 8px}
+.fold-btn{cursor:pointer}

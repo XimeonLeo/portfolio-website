@@ -1,0 +1,71 @@
+/* Ambient layer: night theme, the day/night switch, the background canvas and the custom cursor (ambient.js) */
+
+/* the canvas sits behind every section; it shows through wherever a section has no background of its own */
+html{background:var(--paper)}
+body{background:transparent}
+.amb-canvas{position:fixed;inset:0;z-index:-1;pointer-events:none;display:block}
+
+/* ---------- night: the same site after dark ---------- */
+html[data-theme="night"]{
+  --paper:#0B0E14; --paper-2:#111620; --card:#151B26; --ink:#ECE8DD; --ink-2:#C5C1B6; --mute:#8F8C84;
+  --line:#232B38; --line-2:#323C4C; --signal-ink:#FF8A5C; --ok:#3DDC97; --ok-soft:#12352A; --warn:#E3A54A;
+  color-scheme:dark;
+}
+html[data-theme="night"] body{color:var(--ink)}
+html[data-theme="night"] .grid-bg{background-image:linear-gradient(rgba(236,232,221,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(236,232,221,.05) 1px,transparent 1px)}
+html[data-theme="night"] .nav.scrolled .nav-bar{box-shadow:0 10px 30px -18px rgba(0,0,0,.8)}
+html[data-theme="night"] .btn{color:#0B0E14}
+html[data-theme="night"] .btn.ghost{color:var(--ink)}
+html[data-theme="night"] .btn.ghost:hover{color:#0B0E14}
+html[data-theme="night"] .btn:hover{color:#fff}
+html[data-theme="night"] .mini-doc,html[data-theme="night"] .mini-chat span:not(.me){background:#1B2230;border-color:var(--line-2)}
+html[data-theme="night"] .auto-on .task{background:#10241C;border-color:#1F4A38}
+html[data-theme="night"] .case,html[data-theme="night"] .rev,html[data-theme="night"] .svc,html[data-theme="night"] .bl-box{box-shadow:none}
+html[data-theme="night"] img{filter:none}
+/* the editor screenshots and product windows stay as the real tools look */
+
+/* switching themes: the new one grows out of the switch as a circle (ambient.js, View Transitions) */
+::view-transition-old(root),::view-transition-new(root){animation:none;mix-blend-mode:normal}
+::view-transition-new(root){animation:vt-reveal .75s cubic-bezier(.6,0,.3,1) both}
+@keyframes vt-reveal{from{clip-path:circle(0 at var(--vt-x,90%) var(--vt-y,40px))}to{clip-path:circle(var(--vt-r,150vmax) at var(--vt-x,90%) var(--vt-y,40px))}}
+
+/* ---------- the switch in the nav ---------- */
+.theme-btn{flex:none;position:relative;width:40px;height:40px;border-radius:999px;border:1px solid var(--line-2);background:transparent;display:grid;place-items:center;overflow:hidden;color:var(--ink);transition:border-color .25s,background .25s}
+.theme-btn:hover{border-color:var(--ink);background:var(--paper-2)}
+.theme-btn:focus-visible{outline:2px solid var(--signal);outline-offset:3px}
+.theme-btn svg{position:absolute;width:20px;height:20px;transition:transform .6s cubic-bezier(.5,1.6,.4,1),opacity .4s}
+.theme-btn .t-sun{color:#E8890C}
+.theme-btn .t-sun circle{fill:currentColor}
+.theme-btn .t-sun path{stroke:currentColor;stroke-width:2;stroke-linecap:round}
+.theme-btn .t-moon path{fill:#F4EBCF}
+.theme-btn .t-moon circle{fill:#F4EBCF}
+html:not([data-theme="night"]) .theme-btn .t-moon{transform:translateY(26px) rotate(-40deg);opacity:0}
+html[data-theme="night"] .theme-btn .t-sun{transform:translateY(-26px) rotate(90deg);opacity:0}
+.theme-btn .t-star{position:absolute;width:3px;height:3px;border-radius:50%;background:#F4EBCF;opacity:0;transition:opacity .5s .2s}
+.theme-btn .t-star:nth-of-type(1){left:9px;top:10px}.theme-btn .t-star:nth-of-type(2){right:9px;bottom:11px;width:2px;height:2px}
+html[data-theme="night"] .theme-btn .t-star{opacity:.85}
+html[data-theme="night"] .theme-btn{background:#151B26}
+@media (max-width:1180px){ .theme-btn{order:1;margin-left:auto} .nav .menu-btn{order:1;margin-left:0} .nav .btn.nav-cta{order:2} }
+@media (max-width:860px){ .nav-bar{gap:10px} }
+
+/* ---------- cursor: a dot that follows exactly, a ring that catches up ---------- */
+html.has-cursor,html.has-cursor *{cursor:none !important}
+html.has-cursor input:not([type=checkbox]):not([type=radio]):not([type=button]):not([type=submit]),html.has-cursor textarea,html.has-cursor [contenteditable="true"]{cursor:text !important}
+.cur-dot,.cur-ring{position:fixed;left:0;top:0;z-index:2147483000;pointer-events:none;opacity:0;transition:opacity .3s}
+html.cur-on .cur-dot,html.cur-on .cur-ring{opacity:1}
+html.cur-text .cur-dot,html.cur-text .cur-ring{opacity:0}
+.cur-dot{width:6px;height:6px;margin:-3px 0 0 -3px;border-radius:50%;background:#fff;mix-blend-mode:difference}
+.cur-ring{width:34px;height:34px;margin:-17px 0 0 -17px}
+.cur-ring::before{content:"";position:absolute;inset:0;border-radius:50%;border:1.5px solid var(--signal);transition:transform .35s cubic-bezier(.3,1.4,.5,1),background .3s,border-color .3s}
+.cur-ring span{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) scale(.6);font:600 11px/1 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:#fff;opacity:0;white-space:nowrap;transition:opacity .25s,transform .35s cubic-bezier(.3,1.4,.5,1)}
+html.cur-hot .cur-ring::before{transform:scale(1.5);background:rgba(255,79,26,.10)}
+html.cur-label .cur-ring::before{transform:scale(2.2);background:var(--signal);border-color:var(--signal)}
+html.cur-label .cur-ring span{opacity:1;transform:translate(-50%,-50%) scale(1)}
+html.cur-label .cur-dot{opacity:0}
+html.cur-down .cur-ring::before{transform:scale(.8)}
+html.cur-down.cur-hot .cur-ring::before{transform:scale(1.25)}
+.cur-ping{position:fixed;z-index:2147482999;width:10px;height:10px;margin:-5px 0 0 -5px;border-radius:50%;border:1.5px solid var(--signal);pointer-events:none;animation:cur-ping .6s ease-out forwards}
+@keyframes cur-ping{to{transform:scale(6);opacity:0}}
+
+@media (prefers-reduced-motion:reduce){ .cur-ring::before,.cur-ring span,.theme-btn svg{transition:none} .cur-ping{display:none} }
+@media print{ .amb-canvas,.cur-dot,.cur-ring{display:none} }

@@ -36,8 +36,8 @@
     };
     SHOTS[it.id] = (it.shots || []).map(s => [s[0], s[1] || '']);
   }
-  const WORDS = ['No', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen', 'Twenty'];
-  const word = (n, cap) => { const w = n <= 20 ? WORDS[n] : String(n); return cap ? w : w.toLowerCase(); };
+  const WORDS = ['No', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen', 'Twenty', 'Twenty-one', 'Twenty-two', 'Twenty-three', 'Twenty-four', 'Twenty-five', 'Twenty-six', 'Twenty-seven', 'Twenty-eight', 'Twenty-nine', 'Thirty'];
+  const word = (n, cap) => { const w = n <= 30 ? WORDS[n] : String(n); return cap ? w : w.toLowerCase(); };
 
   function apply(w) {
     w = w && typeof w === 'object' ? w : {};
@@ -87,8 +87,46 @@
     demoGrid.style.display = vis('demo') ? '' : 'none';
     const head = document.querySelector('#work .demo-head'); if (head) head.style.display = vis('client') ? '' : 'none';
     clientGrid.style.display = vis('client') ? '' : 'none';
+    fold();
   }
   window.applyWork = apply;
+
+  // "Show more": each grid shows about 2 rows, a button opens the rest
+  const LABEL = { demo: 'demo builds', client: 'client builds' }, open = { demo: false, client: false }, btns = {};
+  function limitFor(cards) {
+    const w = innerWidth, cols = w <= 640 ? 1 : w <= 1060 ? 2 : 3;
+    let rows = 0, inRow = 0, n = 0;
+    for (const el of cards) {
+      if (el.classList.contains('feature') || cols === 1) { if (inRow) { rows++; inRow = 0; } if (rows >= 2) break; rows++; n++; continue; }
+      if (rows >= 2) break;
+      inRow++; n++;
+      if (inRow === cols) { rows++; inRow = 0; }
+    }
+    return Math.max(n, 3);
+  }
+  function fold() {
+    for (const g of ['demo', 'client']) {
+      const grid = GRIDS[g], cards = [...grid.children].filter(el => el.matches('.case') && el.style.display !== 'none');
+      const limit = limitFor(cards), extra = cards.length - limit;
+      cards.forEach((el, i) => el.classList.toggle('fold-off', !open[g] && i >= limit));
+      let b = btns[g];
+      if (!b) {
+        const wrap = document.createElement('div'); wrap.className = 'fold-wrap';
+        b = btns[g] = document.createElement('button'); b.type = 'button'; b.className = 'btn ghost fold-btn';
+        b.addEventListener('click', () => {
+          open[g] = !open[g]; fold();
+          if (!open[g]) grid.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          else grid.querySelectorAll('.case:not(.in)').forEach(el => el.classList.add('in'));
+        });
+        wrap.appendChild(b); grid.after(wrap);
+      }
+      b.parentNode.style.display = extra > 0 && grid.style.display !== 'none' ? '' : 'none';
+      b.setAttribute('aria-expanded', open[g]);
+      b.innerHTML = open[g] ? 'Show fewer <span class="arr">↑</span>' : `Show all ${cards.length} ${LABEL[g]} <span class="arr">↓</span>`;
+    }
+  }
+  fold();
+  let rz; addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(fold, 150); });
 
   const preview = /[?&]preview=1/.test(location.search) && window.parent !== window;
   if (preview) {

@@ -63,6 +63,8 @@ const EXAMPLES = [
   'When a deal is marked Won in monday.com, create a Google Drive folder and post in Slack',
   'When a Facebook lead comes in, reply on WhatsApp in seconds and add them to GoHighLevel',
   'When a Stripe payment succeeds, send a receipt by email and add the client to Notion',
+  'In Make: when a Typeform is submitted, add the person to HubSpot and post in Slack',
+  'Build a Zap in Zapier: when a new Calendly booking comes in, add a row in Google Sheets and text them by SMS',
   'Every Monday, summarise last week\'s new leads from HubSpot and send it to me on Telegram',
   'When a Typeform is submitted, classify the request with AI and create a Trello card',
   'When a contract PDF lands in Google Drive, read it with AI and add the key dates to Google Calendar',
@@ -75,6 +77,18 @@ const EXAMPLES = [
 const SHORT = e => e.split(',')[0] + '…';
 const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
 
+/* the platform the visitor asks for, if any: the first one they name wins */
+const TOOL_RE = {
+  n8n: /\bn8n\b/,
+  zap: /\bzapier\b|\bzaps?\b/,
+  make: /\bmake\.com\b|\bintegromat\b|\bmake scenarios?\b|\b(?:in|on|using|use|with|via|through|inside|into) make\b(?!\s+(?:a|an|the|it|sure|me|them|us|my|our|this|that)\b)/,
+};
+function toolFrom(t) {
+  let best = null, at = Infinity;
+  for (const [k, re] of Object.entries(TOOL_RE)) { const m = re.exec(t); if (m && m.index < at) { best = k; at = m.index; } }
+  return best;
+}
+const TOOLNAME = { n8n: 'n8n', make: 'Make', zap: 'Zapier' };
 function plan(text) {
   const t = ' ' + text.toLowerCase().replace(/[’']/g, "'") + ' ';
   // apps in the order they are mentioned
@@ -100,7 +114,7 @@ function plan(text) {
   if (steps.length === 1) steps.push({ k: 'code', n: 'Do the work', t: 'Your steps', d: 'I map the exact steps with you on a short call.' });
   steps.push({ k: 'alert', n: 'Alert if anything fails', t: 'Error workflow', d: 'If a step ever fails, you are told straight away, with what went wrong. Every build I ship has this.', extra: 1 });
   const named = new Set(steps.map(s => s.k)), known = [...named].filter(k => NAME[k]).length;
-  return { steps, known, hours: Math.max(2, Math.min(10, steps.length + (ai ? 2 : 0))) };
+  return { steps, known, tool: toolFrom(t), hours: Math.max(2, Math.min(10, steps.length + (ai ? 2 : 0))) };
 }
 
 /* little tiles for steps that are not an app */
@@ -177,9 +191,11 @@ function sample(s) {
   }
   return { ok: true };
 }
+const ZAPNAME = s => NAME[s.k] || { schedule: 'Schedule by Zapier', webhook: 'Webhooks by Zapier', claude: 'Anthropic (Claude)', if: 'Filter by Zapier', wait: 'Delay by Zapier', code: 'Code by Zapier', alert: 'Email by Zapier' }[s.k] || 'Step';
 const APPNAME = s => NAME[s.k] || { schedule: 'Schedule', webhook: 'Webhooks', claude: 'Anthropic Claude', if: 'Flow control', wait: 'Tools', code: 'Tools', alert: 'Email', errtrig: 'Error Trigger', noop: 'No Operation' }[s.k] || 'Step';
 function typeOf(tool, s) {
   if (tool === 'make') return s.n;
+  if (tool === 'zap') return ZAPNAME(s);
   if (s.k === 'errtrig') return 'Error Trigger';
   if (s.k === 'noop') return 'No Operation, do nothing';
   if (s.trig) return s.k === 'schedule' ? 'Schedule Trigger' : s.k === 'webhook' ? 'Webhook' : (NAME[s.k] || 'App') + ' Trigger';
@@ -189,6 +205,11 @@ function typeOf(tool, s) {
 function layout(tool, steps) {
   const GAP = tool === "n8n" ? 178 : 172, Y = 96, Y2 = 300, nodes = [], edges = [], notes = [];
   const add = (s, x, y, extra = {}) => nodes.push({ ...s, x, y, si: steps.indexOf(s), ...extra }) - 1;
+  if (tool === 'zap') {
+    // Zapier: one column of step cards; errors go to Zapier's own email alerts, so no extra step
+    steps.filter(s => !s.extra).forEach((s, i) => { add(s, 20, 24 + i * 112); if (i) edges.push({ a: i - 1, b: i }); });
+    return { nodes, edges, notes, W: 480, H: 24 + nodes.length * 112 };
+  }
   let x = 40, prev = null, filter = null, noopX = 0;
   steps.filter(s => !s.extra).forEach(s => {
     if (tool === 'make' && s.k === 'if') { filter = s; return; }          // Make: a filter on the link, not a module
@@ -211,47 +232,60 @@ function layout(tool, steps) {
       edges.push({ a: lastMain, b: a, err: 1, lab: 'Error handler' });
     }
   }
-  const W = Math.max(...nodes.map(n => n.x)) + (tool === 'n8n' ? 150 : 140), H = (nodes.some(n => n.y === Y2) ? Y2 + 110 : Y + 130);
+  const W = Math.max(...nodes.map(n => n.x)) + (tool === 'n8n' ? 190 : 140), H = (nodes.some(n => n.y === Y2) ? Y2 + 110 : Y + 130) + (tool === 'n8n' ? 70 : 0);
   return { nodes, edges, notes, W, H };
 }
-const C = (tool, n) => tool === 'make' ? { x: n.x + 42, y: n.y + 42 } : { x: n.x + 45, y: n.y + 45 };
+const C = (tool, n) => tool === 'zap' ? { x: n.x + 220, y: n.y + 39 } : tool === 'make' ? { x: n.x + 42, y: n.y + 42 } : { x: n.x + 45, y: n.y + 45 };
 function face(tool, n, i) {
   const aria = `aria-label="${esc(n.n)}: see what this step does"`, pos = `left:${n.x}px;top:${n.y}px`;
   if (tool === 'n8n') {
-    const ic = TILE[n.k] ? icon(n.k, 40) : logo(n.k, 40);
-    return `<button type="button" class="en n8 ${n.trig ? 'trig' : ''}" data-i="${i}" style="${pos}" ${aria}><span class="n8-face">${ic}${n.trig ? '<i class="bolt">⚡</i>' : ''}<i class="spin"></i><i class="ck">✓</i></span><span class="n8-lbl"><b>${esc(n.n)}</b><small>${esc(typeOf('n8n', n))}</small></span></button>`;
+    const ic = TILE[n.k] ? icon(n.k, 44) : logo(n.k, 44), L = sketch.L, last = L && !L.edges.some(e => e.a === i) && n.k !== 'noop';
+    const ins = n.trig ? '' : '<i class="h-in"></i>', outs = n.k === 'if' ? '<i class="h-out o1"><em>true</em></i><i class="h-out o2"><em>false</em></i>' : '<i class="h-out"></i>';
+    return `<button type="button" class="en n8 ${n.trig ? 'trig' : ''} k-${n.k}" data-i="${i}" style="${pos}" ${aria}><span class="n8-face">${ic}${n.trig ? '<i class="bolt"><svg viewBox="0 0 24 24"><path d="M13 2 4 14h6l-1 8 9-12h-6z"/></svg></i>' : ''}${ins}${outs}${last ? '<i class="h-plus"><b>+</b></i>' : ''}<i class="spin"></i><i class="ck"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></i></span><span class="n8-lbl"><b>${esc(n.n)}</b><small>${esc(typeOf('n8n', n))}</small></span></button>`;
+  }
+  if (tool === 'zap') {
+    const ic = TILE[n.k] ? icon(n.k, 28) : logo(n.k, 28);
+    return `<button type="button" class="en zp" data-i="${i}" style="${pos}" ${aria}><span class="zp-ic">${ic}</span><span class="zp-txt"><small><span class="zp-kind">${n.trig ? '⚡ Trigger' : '◆ Action'}</span>${i + 1}. ${esc(ZAPNAME(n))}</small><b>${esc(n.n)}</b></span><i class="spin"></i><i class="ck">✓</i><i class="zp-more">⋯</i></button>`;
   }
   const m = window.pfMeta ? window.pfMeta(n.k) : {}, col = TILE[n.k] ? TILE[n.k][1] : (m.svg ? '#F2F1F6' : (m.c || '#6D00CC'));
   const ic = TILE[n.k] ? `<span class="lg lg-txt" style="width:40px;height:40px;font-size:20px;background:transparent;color:#fff">${TILE[n.k][0]}</span>` : logo(n.k, 40, 'white');
   return `<button type="button" class="en mk" data-i="${i}" style="${pos};--c:${col}" ${aria}><span class="mk-face">${ic}${n.trig ? '<i class="clock">⏱</i>' : ''}<i class="ring"></i><i class="ops">1</i></span><span class="mk-lbl"><b>${esc(APPNAME(n))}</b><small>${esc(n.n)}</small><em>${i + 1}</em></span></button>`;
 }
+const N8_DECO = `<div class="n8-side"><i class="n8-lg">${logo('n8n', 20)}</i><i>＋</i><i>⌕</i><span></span><i>⌂</i><i>◫</i><i>⚙</i></div>
+  <div class="dr"><i>＋</i><i>⌕</i><i>✦</i></div><div class="dz"><i>⤢</i><i>＋</i><i>－</i><i>⇆</i></div>`;
 function drawEditor(fresh) {
   const S = sketch, tool = S.tool, L = S.L = layout(tool, S.steps), win = $('.bl-win', out);
   $$('.bl-tool [data-tool]', out).forEach(b => { b.classList.toggle('on', b.dataset.tool === tool); b.setAttribute('aria-selected', b.dataset.tool === tool); });
   win.className = 'ed-window bl-win t-' + tool;
   const chrome = tool === 'n8n'
-    ? `<span class="c-crumb">${logo('n8n', 18)}<span>Personal</span><i>/</i><b>My workflow</b><em class="c-tag">+ Add tag</em></span><span class="c-mid"><b>Editor</b><span>Executions</span></span><span class="c-act"><span class="c-state">Inactive</span><i class="sw"></i><span class="c-btn solid">Save</span></span>`
+    ? `<span class="c-crumb"><span>Personal</span><i>/</i><b>My workflow</b><em class="c-tag">+ Add tag</em></span><span class="c-mid"><b>Editor</b><span>Executions</span><span>Evaluations</span></span><span class="c-act"><span class="c-state">Inactive</span><i class="sw"></i><span class="c-btn">Share</span><span class="c-btn n8-save">Save</span></span>`
+    : tool === 'zap'
+    ? `<span class="c-crumb"><span class="c-home">⌂</span>${logo('zapier', 18)}<b>Untitled Zap</b><em class="c-tag">Draft</em></span><span class="c-mid"></span><span class="c-act"><span class="c-state">Off</span><i class="sw"></i><span class="c-btn zp-btn">Publish</span></span>`
     : `<span class="c-crumb"><span class="c-back">‹</span>${logo('make', 18)}<b>My scenario</b></span><span class="c-mid"><b>Diagram</b><span>History</span></span><span class="c-act"><span class="c-state">Scheduling</span><i class="sw"></i></span>`;
   let svg = `<svg class="ed-wires" viewBox="0 0 ${L.W} ${L.H}" width="${L.W}" height="${L.H}"><defs><marker id="bl-arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z"/></marker></defs>`;
   const badges = [];
   L.edges.forEach((e, k) => {
     const A = C(tool, L.nodes[e.a]), B = C(tool, L.nodes[e.b]); let d;
-    if (tool === 'n8n') {
-      const down = B.y > A.y + 20, x1 = A.x + 45, y1 = A.y, x2 = B.x - 47, y2 = B.y;
-      d = down && Math.abs(B.x - A.x) < 10 ? `M${A.x} ${A.y + 46}L${B.x} ${B.y - 48}` : `M${x1} ${y1}C${x1 + Math.max(40, (x2 - x1) / 2)} ${y1} ${x2 - Math.max(40, (x2 - x1) / 2)} ${y2} ${x2} ${y2}`;
+    if (tool === 'zap') {
+      d = `M${A.x} ${A.y + 39}L${B.x} ${B.y - 39}`;
+    } else if (tool === 'n8n') {
+      const fromIf = L.nodes[e.a].k === 'if', y0 = fromIf ? A.y + (e.lab === 'false' ? 16 : -16) : A.y;
+      const down = B.y > A.y + 20, x1 = A.x + 52, y1 = y0, x2 = B.x - 52, y2 = B.y;
+      d = down && Math.abs(B.x - A.x) < 10 ? `M${A.x} ${A.y + 46}L${B.x} ${B.y - 48}` : `M${x1} ${y1}C${x1 + Math.max(50, (x2 - x1) / 2)} ${y1} ${x2 - Math.max(50, (x2 - x1) / 2)} ${y2} ${x2} ${y2}`;
     } else {
       const vert = Math.abs(B.x - A.x) < 10;
       d = vert ? `M${A.x} ${A.y + 46}L${B.x} ${B.y - 46}` : `M${A.x + 48} ${A.y}C${(A.x + B.x) / 2} ${A.y} ${(A.x + B.x) / 2} ${B.y} ${B.x - 48} ${B.y}`;
     }
     svg += `<path class="ew${e.err ? ' err' : ''}" data-k="${k}" d="${d}" ${tool === 'n8n' ? 'marker-end="url(#bl-arr)"' : ''}/><path class="ew-flow" data-k="${k}" d="${d}"/>`;
     if (tool === 'n8n' && !e.err) svg += `<text class="ew-items" data-k="${k}" x="${(A.x + B.x) / 2}" y="${(A.y + B.y) / 2 - 10}" text-anchor="middle">1 item</text>`;
-    if (e.lab) svg += `<text class="ew-lab" x="${(A.x + B.x) / 2 + (e.err ? 10 : 0)}" y="${(A.y + B.y) / 2 + (tool === 'n8n' ? 18 : 4)}" text-anchor="${e.err ? 'start' : 'middle'}">${esc(e.lab)}</text>`;
+ if (tool === 'zap') svg += `<g class="zp-plus" data-k="${k}" transform="translate(${A.x} ${(A.y + B.y) / 2})"><circle r="11"/><text y="4.5">+</text></g>`;
+    if (e.lab && !(tool === 'n8n' && L.nodes[e.a].k === 'if')) svg += `<text class="ew-lab" x="${(A.x + B.x) / 2 + (e.err ? 10 : 0)}" y="${(A.y + B.y) / 2 + (tool === 'n8n' ? 18 : 4)}" text-anchor="${e.err ? 'start' : 'middle'}">${esc(e.lab)}</text>`;
     if (e.filter) badges.push(`<button type="button" class="mk-filter" data-si="${S.steps.indexOf(e.filter)}" style="left:${(A.x + B.x) / 2}px;top:${(A.y + B.y) / 2}px" aria-label="Filter: ${esc(e.filter.n)}"><i>⧩</i><span>${esc(e.filter.n)}</span></button>`);
   });
   svg += '</svg>';
   const notes = L.notes.map(n => `<div class="bl-sticky" style="left:${n.x}px;top:${n.y}px;width:${n.w}px;height:${n.h}px"><b>${esc(n.text)}</b></div>`).join('');
   win.innerHTML = `<div class="ed-chrome">${chrome}</div>
-    <div class="ed-body"><div class="ed-canvas"><div class="ed-deco">${tool === 'n8n' ? '<div class="dz"><i>⤢</i><i>＋</i><i>－</i></div>' : '<div class="dm"><i>⚙</i><i>✎</i><i>⤢</i></div>'}</div>
+    <div class="ed-body"><div class="ed-canvas"><div class="ed-deco">${tool === 'n8n' ? N8_DECO : tool === 'zap' ? '<div class="dzl"><i>⚡</i><i>▤</i><i>◷</i><i>⚙</i></div>' : '<div class="dm"><i>⚙</i><i>✎</i><i>⤢</i></div>'}</div>${tool === 'n8n' ? '<div class="n8-exec"></div>' : ''}
       <div class="bl-scroll"><div class="bl-size"><div class="ed-world bl-world" style="width:${L.W}px;height:${L.H}px">${notes}${svg}${L.nodes.map((n, i) => face(tool, n, i)).join('')}${badges.join('')}</div></div></div>
       <div class="ed-toast"></div></div>
       <aside class="ed-panel"></aside></div>
@@ -265,7 +299,8 @@ function fitEditor() {
   if (fitEditor.ro && fitEditor.el !== sc) { fitEditor.ro.disconnect(); fitEditor.ro.observe(sc); fitEditor.el = sc; }
   if (sc.clientWidth < 80 || sc.clientHeight < 80) return;                 // not laid out yet: the observer calls back
   let s = Math.min(1, (sc.clientWidth - 32) / L.W, (sc.clientHeight - 24) / L.H);
-  if (s < .62) s = Math.min(.62, (sc.clientHeight - 24) / L.H);             // small screens: keep it readable, scroll sideways
+  if (sketch.tool === 'zap') s = Math.min(1, (sc.clientWidth - 32) / L.W, Math.max(.8, s));
+  else if (s < .62) s = Math.min(.62, (sc.clientHeight - 24) / L.H);             // small screens: keep it readable, scroll sideways
   sketch.scale = s;
   $('.bl-size', out).style.cssText = `width:${L.W * s}px;height:${L.H * s}px`;
   $('.bl-world', out).style.transform = `scale(${s})`;
@@ -280,13 +315,17 @@ function setRun(r, quiet) {
   const N = order.length, busy = r >= 0 && r < N, win = $('.bl-win', out);
   win.classList.toggle('busy', busy); win.classList.toggle('finished', r >= N);
   const label = tool === 'n8n' ? (busy ? 'Executing workflow' : 'Execute workflow') : (busy ? 'Stop' : 'Run once');
-  const status = r < 0 ? 'Building the sketch…' : r >= N ? (tool === 'n8n' ? 'Test run succeeded' : 'The scenario run was completed') : `Step ${r + 1} of ${N}: ${L.nodes[order[r]].n}`;
+  const status = r < 0 ? 'Building the sketch…' : r >= N ? (tool === 'n8n' ? 'Test run succeeded' : tool === 'zap' ? 'Test successful, every step ran' : 'The scenario run was completed') : `Step ${r + 1} of ${N}: ${L.nodes[order[r]].n}`;
+  const stat = `<span class="f-stat ${r >= N ? 'is-ok' : busy ? 'is-run' : ''}">${busy ? '<i class="dot"></i>' : r >= N ? '✓ ' : ''}${esc(status)}</span>`;
+  if (tool === 'n8n') { const ex = $('.n8-exec', out); if (ex) ex.innerHTML = `<button type="button" class="f-btn f-n8" data-run><i class="f-ic">${busy ? '' : '<svg viewBox="0 0 24 24"><path d="M9 3h6M10 3v6L4.5 18.5A2 2 0 0 0 6.2 21.5h11.6a2 2 0 0 0 1.7-3L14 9V3"/></svg>'}</i>${label}</button>`; const sv = $('.n8-save', out); if (sv) sv.textContent = r >= N ? 'Saved' : 'Save'; }
   $('.ed-foot', out).innerHTML = tool === 'n8n'
-    ? `<span class="f-logs">Logs</span><button type="button" class="f-btn f-n8" data-run><i class="f-ic">${busy ? '' : '⚗'}</i>${label}</button><span class="f-stat ${r >= N ? 'is-ok' : busy ? 'is-run' : ''}">${busy ? '<i class="dot"></i>' : r >= N ? '✓ ' : ''}${esc(status)}</span>`
+    ? `<span class="f-logs"><b>Logs</b><small>${r >= N ? 'Last execution · success' : busy ? 'Running…' : 'No executions yet'}</small></span>${stat}`
+    : tool === 'zap'
+    ? `<button type="button" class="f-btn f-zp" data-run><i class="f-ic">${busy ? '' : '▶'}</i>${busy ? 'Testing' : 'Test Zap'}</button>${stat}`
     : `<button type="button" class="f-btn f-mk" data-run aria-label="${label}"><i class="f-ic">${busy ? '' : '▶'}</i></button><span class="f-sub"><b>${label}</b><small>Immediately as data arrives</small></span><span class="f-stat ${r >= N ? 'is-ok' : busy ? 'is-run' : ''}">${busy ? '<i class="dot"></i>' : r >= N ? '✓ ' : ''}${esc(status)}</span>`;
   // follow the running step when the canvas scrolls sideways
-  if (busy) { const el = $(`.bl-world .en[data-i="${order[r]}"]`, out), sc = $('.bl-scroll', out); if (el && sc && sc.scrollWidth > sc.clientWidth) sc.scrollTo({ left: Math.max(0, (L.nodes[order[r]].x + 45) * sketch.scale - sc.clientWidth / 2), behavior: reduce ? 'auto' : 'smooth' }); }
-  if (r >= N && !quiet) { const t = $('.ed-toast', out); t.textContent = tool === 'n8n' ? '✓ Workflow executed successfully' : '✓ The scenario run was completed'; t.classList.add('on'); setTimeout(() => t.classList.remove('on'), 2600); }
+  if (busy) { const el = $(`.bl-world .en[data-i="${order[r]}"]`, out), sc = $('.bl-scroll', out); if (el && sc && (sc.scrollWidth > sc.clientWidth || sc.scrollHeight > sc.clientHeight)) sc.scrollTo({ left: Math.max(0, (L.nodes[order[r]].x + 45) * sketch.scale - sc.clientWidth / 2), top: tool === 'zap' ? Math.max(0, (L.nodes[order[r]].y + 39) * sketch.scale - sc.clientHeight / 2) : 0, behavior: reduce ? 'auto' : 'smooth' }); }
+  if (r >= N && !quiet) { const t = $('.ed-toast', out); t.textContent = tool === 'n8n' ? '✓ Workflow executed successfully' : tool === 'zap' ? '✓ Your Zap test was successful' : '✓ The scenario run was completed'; t.classList.add('on'); setTimeout(() => t.classList.remove('on'), 2600); }
   sketch.r = r;
 }
 async function playRun(id, build) {
@@ -309,8 +348,8 @@ function showPanel() {
   const S = sketch, L = S.L, pane = $('.ed-panel', out); if (!pane) return;
   $$('.bl-world .en', out).forEach(x => x.classList.toggle('sel', S.picked !== null && +x.dataset.i === S.picked));
   if (S.picked === null) {
-    pane.innerHTML = `<div class="k">${S.tool === 'n8n' ? 'n8n' : 'Make'} · ${L.nodes.length} steps</div><h4><span>What this workflow does<small>Click a step to see its details</small></span></h4>
-      <ol class="bl-steps">${L.nodes.map((n, i) => `<li><button type="button" data-pick="${i}">${TILE[n.k] ? icon(n.k, 22) : logo(n.k, 22)}<span><b>${esc(n.n)}</b><small>${esc(S.tool === 'make' ? APPNAME(n) : typeOf('n8n', n))}</small></span></button></li>`).join('')}</ol>`;
+    pane.innerHTML = `<div class="k">${TOOLNAME[S.tool]} · ${L.nodes.length} steps</div><h4><span>What this workflow does<small>Click a step to see its details</small></span></h4>
+      <ol class="bl-steps">${L.nodes.map((n, i) => `<li><button type="button" data-pick="${i}">${TILE[n.k] ? icon(n.k, 22) : logo(n.k, 22)}<span><b>${esc(n.n)}</b><small>${esc(S.tool === 'make' ? APPNAME(n) : typeOf(S.tool, n))}</small></span></button></li>`).join('')}</ol>`;
     return;
   }
   const n = L.nodes[S.picked], inEdge = L.edges.find(e => e.b === S.picked), prev = inEdge ? L.nodes[inEdge.a] : null, next = L.edges.filter(e => e.a === S.picked).map(e => L.nodes[e.b].n);
@@ -321,7 +360,7 @@ function showPanel() {
   else if (tab === 'output') body = n.k === 'noop' ? '<p class="p-hint">Nothing comes out: the item simply stops here.</p>' : `<p class="p-hint">Sample data from the test run. Made up, so nobody real is in it.</p>${json(o)}`;
   else body = `<p>${esc(n.d || '')}</p><dl class="p-flow"><div><dt>Gets</dt><dd>${n.trig ? 'Nothing: this step starts it' : esc(prev ? prev.n : 'The step before it')}</dd></div><div><dt>Hands on to</dt><dd>${esc(next.join(', ') || 'Nothing: this is the last step')}</dd></div></dl>`;
   pane.innerHTML = `<div class="k"><button type="button" class="p-follow" data-pick="">← All steps</button></div>
-    <h4>${TILE[n.k] ? icon(n.k, 22) : logo(n.k, 22)}<span>${esc(n.n)}<small>${esc(S.tool === 'make' ? APPNAME(n) : typeOf('n8n', n))}</small></span></h4>
+    <h4>${TILE[n.k] ? icon(n.k, 22) : logo(n.k, 22)}<span>${esc(n.n)}<small>${esc(S.tool === 'make' ? APPNAME(n) : typeOf(S.tool, n))}</small></span></h4>
     ${ran ? '<span class="p-st is-ok">✓ Ran in the test</span>' : '<span class="p-st">Not run yet</span>'}
     <div class="p-tabs" role="tablist">${[['explain', 'Explain'], ['input', 'Input'], ['output', 'Output']].map(([k, l]) => `<button type="button" role="tab" data-tab="${k}" class="${tab === k ? 'on' : ''}" aria-selected="${tab === k}">${l}</button>`).join('')}</div>
     <div class="p-body">${body}</div>`;
@@ -342,7 +381,7 @@ form.onsubmit = async e => {
   const text = input.value.trim();
   if (text.length < 12) { $('.bl-err').textContent = 'Tell me a little more: what happens first, and what should happen next?'; input.focus(); return; }
   $('.bl-err').textContent = '';
-  const id = ++job, { steps, known, hours } = plan(text), sleep = ms => new Promise(r => setTimeout(r, reduce ? 0 : ms));
+  const id = ++job, { steps, known, hours, tool: asked } = plan(text), sleep = ms => new Promise(r => setTimeout(r, reduce ? 0 : ms));
   root.classList.add('has-out'); out.hidden = false;
   const btn = $('.bl-go'); btn.disabled = true; btn.classList.add('busy');
   const apps = [...new Set(steps.map(x => x.k))];
@@ -353,7 +392,7 @@ form.onsubmit = async e => {
       <p class="bf-msg">Reading your request…</p><div class="bf-bar"><i></i></div></div>`;
     out.scrollIntoView({ behavior: 'smooth', block: 'center' });
     const msg = $('.bf-msg', out), forge = $('.bl-forge', out);
-    const lines = ['Reading your request…', `Found ${apps.filter(k => NAME[k]).length || 'your'} app${apps.filter(k => NAME[k]).length === 1 ? '' : 's'}…`, 'Wiring the steps together…', 'Adding the safety net…'];
+    const lines = ['Reading your request…', ...(asked ? [`Building it in ${TOOLNAME[asked]}…`] : []), `Found ${apps.filter(k => NAME[k]).length || 'your'} app${apps.filter(k => NAME[k]).length === 1 ? '' : 's'}…`, 'Wiring the steps together…', 'Adding the safety net…'];
     for (let i = 0; i < lines.length; i++) { msg.textContent = lines[i]; msg.classList.remove('in'); void msg.offsetWidth; msg.classList.add('in'); forge.style.setProperty('--p', (i + 1) / lines.length); await sleep(620); if (id !== job) return; }
     forge.classList.add('charge'); await sleep(520); if (id !== job) return;
     forge.classList.add('boom'); box.classList.add('shake');
@@ -363,12 +402,13 @@ form.onsubmit = async e => {
     await sleep(650); box.classList.remove('shake'); if (id !== job) return;
   }
   /* ---------- the sketch, drawn like the real n8n and Make editors ---------- */
-  sketch = { steps, known, hours, text, tool: sketch && sketch.tool || 'n8n', picked: null, tab: 'explain' };
+  sketch = { steps, known, hours, text, tool: asked || (sketch && sketch.tool) || 'n8n', asked, picked: null, tab: 'explain' };
   out.innerHTML = `<div class="bl-ed reveal" aria-live="polite">
       <div class="bl-tool" role="tablist" aria-label="Show the workflow in">
         <span>See it in</span>
         <button type="button" role="tab" data-tool="n8n">${logo('n8n', 16)}n8n</button>
         <button type="button" role="tab" data-tool="make">${logo('make', 16)}Make</button>
+        <button type="button" role="tab" data-tool="zap">${logo('zapier', 16)}Zapier</button>
         <em class="bl-tip">Click any step to see what it does</em>
       </div>
       <div class="ed-window bl-win"></div>
@@ -377,10 +417,10 @@ form.onsubmit = async e => {
   out.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'nearest' });
   drawEditor(true);
   await playRun(id, true); if (id !== job) return;
-  const brief = `Hi Simeon, I'd like this automated:\n\n"${text}"\n\nThe sketch on your site came out as:\n${steps.map((s, i) => `${i + 1}. ${s.n} (${s.t})`).join('\n')}`;
+  const brief = `Hi Simeon, I'd like this automated:\n\n"${text}"\n\nThe sketch on your site (${TOOLNAME[sketch.tool]}) came out as:\n${steps.map((s, i) => `${i + 1}. ${s.n} (${s.t})`).join('\n')}`;
   const sum = $('.bl-sum', out); sum.hidden = false;
   sum.innerHTML = `<div><p><b>${steps.length} steps</b>${known ? `, ${known} app${known > 1 ? 's' : ''}` : ''}. A build like this usually takes <b>${hours <= 4 ? '2 to 4' : hours <= 7 ? '3 to 7' : '5 to 10'} days</b>.</p>
-    <p class="bl-fine">This is a first sketch from your words, in the editor I would build it in. On a short call I confirm the details and give you a fixed price.</p></div>
+    <p class="bl-fine">This is a first sketch from your words, ${sketch.asked ? `in ${TOOLNAME[sketch.asked]}, as you asked` : 'in the editor I would build it in'}. On a short call I confirm the details and give you a fixed price.</p></div>
     <div class="bl-cta"><a class="btn signal" target="_blank" rel="noopener" href="https://wa.me/${(window.SITE && window.SITE.whatsapp) || '2348110117004'}?text=${encodeURIComponent(brief)}">Send this to me <span class="arr">→</span></a>
     <a class="btn ghost" href="mailto:${(window.SITE && window.SITE.email) || 'simeono.automation@gmail.com'}?subject=${encodeURIComponent('Workflow sketch from your site')}&body=${encodeURIComponent(brief)}">By email</a></div>`;
   btn.disabled = false; btn.classList.remove('busy'); btn.querySelector('span').textContent = 'Build again';
